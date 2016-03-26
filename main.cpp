@@ -56,6 +56,7 @@ int main(int argc, char **argv) {
     info();
     return 0;
   }
+  int i;
   // set variable
   string train_file = "", output_file = "";
   string save_vocab_file = "", read_vocab_file = "";
