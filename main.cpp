@@ -14,7 +14,6 @@ using namespace std;
 
 // print args info
 void info() {
-	printf("WORD VECTOR estimation toolkit v 0.1c\n\n");
     printf("Options:\n");
     printf("Parameters for training:\n");
     printf("\t-train <file>\n");
@@ -77,12 +76,12 @@ int main(int argc, char **argv) {
   float alpha = 0.025, sample = 0.001;
   int num_threads = 1, iter = 1, min_count = 5, negative = 5;
   if ((i = ArgPos((char *)"-size", argc, argv)) > 0) layer1_size = atoi(argv[i + 1]);
-  if ((i = ArgPos((char *)"-train", argc, argv)) > 0) train_file(argv[i + 1]);
-  if ((i = ArgPos((char *)"-save-vocab", argc, argv)) > 0) save_vocab_file(argv[i + 1]);
-  if ((i = ArgPos((char *)"-read-vocab", argc, argv)) > 0) read_vocab_file(argv[i + 1]);
-  if ((i = ArgPos((char *)"-model", argc, argv)) > 0) model(argv[i+1]);
+  if ((i = ArgPos((char *)"-train", argc, argv)) > 0) train_file = string(argv[i + 1]);
+  if ((i = ArgPos((char *)"-save-vocab", argc, argv)) > 0) save_vocab_file = string(argv[i + 1]);
+  if ((i = ArgPos((char *)"-read-vocab", argc, argv)) > 0) read_vocab_file= string(argv[i + 1]);
+  if ((i = ArgPos((char *)"-model", argc, argv)) > 0) model = string(argv[i+1]);
   if ((i = ArgPos((char *)"-alpha", argc, argv)) > 0) alpha = atof(argv[i + 1]);
-  if ((i = ArgPos((char *)"-output", argc, argv)) > 0) strcpy(output_file, argv[i + 1]);
+  if ((i = ArgPos((char *)"-output", argc, argv)) > 0) output_file = string(argv[i + 1]);
   if ((i = ArgPos((char *)"-window", argc, argv)) > 0) window = atoi(argv[i + 1]);
   if ((i = ArgPos((char *)"-sample", argc, argv)) > 0) sample = atof(argv[i + 1]);
   if ((i = ArgPos((char *)"-negative", argc, argv)) > 0) negative = atoi(argv[i + 1]);

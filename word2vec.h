@@ -17,7 +17,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
-
+#include <cstring>
 using namespace std;
 
 class Word2vec {
@@ -28,7 +28,7 @@ public:
 	int num_threads;
 	int layer1_size;
 	int window;
-	int negtive;
+	int negative;
 	int min_count;
 	float sample;
 	float alpha;
