@@ -49,7 +49,7 @@ int Word2vec::learn_vocab_from_trainfile(const string train_file) {
 	fin.close();
 	// remove word that cnt < min_cnt
 	for (auto iter = word_cnt.begin(); iter != word_cnt.end(); iter++) {
-		if (iter->second >= min_cnt) {
+		if (iter->second >= min_count) {
 			vocab_word* vw = new vocab_word(iter->first, iter->second);
 			vocab.push_back(vw);
 		}

@@ -15,14 +15,13 @@
 #include <fstream>
 #include <sstream>
 #include <vector>
+#include <unordered_map>
 #include <string>
 #include <algorithm>
 #include <cstring>
 using namespace std;
 
-inline bool vocab_cmp(const vocab_word* w1, const vocab_word* w2) {
-	return w1->cnt > w2->cnt;
-}
+
 
 struct vocab_word {
 	string word;
@@ -32,6 +31,10 @@ struct vocab_word {
 	vector<int> point; // huffman path's word index
 	vocab_word(string word_, long long cnt_): word(word_), cnt(cnt_) {};
 };
+
+inline bool vocab_cmp(const vocab_word* w1, const vocab_word* w2) {
+	return w1->cnt > w2->cnt;
+}
 class Word2vec {
 private:
 	string model;
