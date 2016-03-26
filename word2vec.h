@@ -54,8 +54,8 @@ private:
 	// void read_words_from
 public:
 	Word2vec(string model, string train_method, int iter, int num_threads, int layer1_size, int window, int negative, int min_count, float sample, float alpha);
-	Word2vec();
-	~Word2vec();
+	//Word2vec();
+	//~Word2vec();
 	int learn_vocab_from_trainfile(const string train_file);
 	void train_model(const string train_file);
 	void save_vector(const string output_file);
