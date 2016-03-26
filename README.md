@@ -1,2 +1,3 @@
 # word2vec
-c++ implemention 
+Implemention of multi-thread word2vec using c++11.
+optimization: Adagrad

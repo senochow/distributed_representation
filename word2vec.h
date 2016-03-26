@@ -20,8 +20,20 @@
 #include <cstring>
 using namespace std;
 
+inline bool vocab_cmp(const vocab_word* w1, const vocab_word* w2) {
+	return w1->cnt > w2->cnt;
+}
+
+struct vocab_word {
+	string word;
+	long long cnt;
+	int code_len;
+	vector<int> code; // huffman code
+	vector<int> point; // huffman path's word index
+	vocab_word(string word_, long long cnt_): word(word_), cnt(cnt_) {};
+};
 class Word2vec {
-public:
+private:
 	string model;
 	string train_method;
 	int iter;
@@ -32,8 +44,19 @@ public:
 	int min_count;
 	float sample;
 	float alpha;
+private:
+	vector<vocab_word *> vocab;
+	// unordered_map<string, 
+	void train_model_thread(const string filename, int t_id);
+	// void read_words_from
 public:
 	Word2vec(string model, string train_method, int iter, int num_threads, int layer1_size, int window, int negative, int min_count, float sample, float alpha);
+	Word2vec();
+	~Word2vec();
+	int learn_vocab_from_trainfile(const string train_file);
+	void train_model(const string train_file);
+	void save_vector(const string output_file);
+
 };	
 
 #endif

@@ -90,16 +90,18 @@ int main(int argc, char **argv) {
   if ((i = ArgPos((char *)"-min-count", argc, argv)) > 0) min_count = atoi(argv[i + 1]);
   
   if (model == "cbow") alpha = 0.05;
-  Word2vec(model, train_method, iter, num_threads, layer1_size, window, negative, min_count, sample, alpha);
-  // vocab = (struct vocab_word *)calloc(vocab_max_size, sizeof(struct vocab_word));
 
-
-  // vocab_hash = (int *)calloc(vocab_hash_size, sizeof(int));
-  // expTable = (real *)malloc((EXP_TABLE_SIZE + 1) * sizeof(real));
-  // for (i = 0; i < EXP_TABLE_SIZE; i++) {
-  //   expTable[i] = exp((i / (real)EXP_TABLE_SIZE * 2 - 1) * MAX_EXP); // Precompute the exp() table
-  //   expTable[i] = expTable[i] / (expTable[i] + 1);                   // Precompute f(x) = x / (x + 1)
-  // }
-  // TrainModel();
+  if (train_file.empty()) {
+  	cerr << "Missing input train file" << endl;
+  	return 0;
+  }
+  if (output_file.empty()) {
+  	cerr << "Missing output_file" << endl;
+  	return 0;
+  }
+  Word2vec w2v_model(model, train_method, iter, num_threads, layer1_size, window, negative, min_count, sample, alpha);
+  w2v_model.learn_vocab_from_trainfile(train_file, min_count);
+  w2v_model.train_model(train_file);
+  w2v_model.save_vector(output_file);
   return 0;
 }
