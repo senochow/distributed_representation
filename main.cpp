@@ -9,7 +9,7 @@
 * Date:    2016/03/26 11:08:28
 * File:    main.cpp
 */
-#include <iostream>
+#include "word2vec.h"
 using namespace std;
 
 // print args info
@@ -72,23 +72,22 @@ int main(int argc, char **argv) {
   if ((i = ArgPos((char *)"-output", argc, argv)) > 0) strcpy(output_file, argv[i + 1]);
   if ((i = ArgPos((char *)"-window", argc, argv)) > 0) window = atoi(argv[i + 1]);
   if ((i = ArgPos((char *)"-sample", argc, argv)) > 0) sample = atof(argv[i + 1]);
-  if ((i = ArgPos((char *)"-hs", argc, argv)) > 0) hs = atoi(argv[i + 1]);
   if ((i = ArgPos((char *)"-negative", argc, argv)) > 0) negative = atoi(argv[i + 1]);
   if ((i = ArgPos((char *)"-threads", argc, argv)) > 0) num_threads = atoi(argv[i + 1]);
   if ((i = ArgPos((char *)"-iter", argc, argv)) > 0) iter = atoi(argv[i + 1]);
   if ((i = ArgPos((char *)"-min-count", argc, argv)) > 0) min_count = atoi(argv[i + 1]);
-  if ((i = ArgPos((char *)"-classes", argc, argv)) > 0) classes = atoi(argv[i + 1]);
   
   if (model == "cbow") alpha = 0.05;
-  vocab = (struct vocab_word *)calloc(vocab_max_size, sizeof(struct vocab_word));
+  Word2vec(model, train_method, iter, num_threads, layer1_size, window, negative, min_count, sample, alpha);
+  // vocab = (struct vocab_word *)calloc(vocab_max_size, sizeof(struct vocab_word));
 
 
-  vocab_hash = (int *)calloc(vocab_hash_size, sizeof(int));
-  expTable = (real *)malloc((EXP_TABLE_SIZE + 1) * sizeof(real));
-  for (i = 0; i < EXP_TABLE_SIZE; i++) {
-    expTable[i] = exp((i / (real)EXP_TABLE_SIZE * 2 - 1) * MAX_EXP); // Precompute the exp() table
-    expTable[i] = expTable[i] / (expTable[i] + 1);                   // Precompute f(x) = x / (x + 1)
-  }
-  TrainModel();
+  // vocab_hash = (int *)calloc(vocab_hash_size, sizeof(int));
+  // expTable = (real *)malloc((EXP_TABLE_SIZE + 1) * sizeof(real));
+  // for (i = 0; i < EXP_TABLE_SIZE; i++) {
+  //   expTable[i] = exp((i / (real)EXP_TABLE_SIZE * 2 - 1) * MAX_EXP); // Precompute the exp() table
+  //   expTable[i] = expTable[i] / (expTable[i] + 1);                   // Precompute f(x) = x / (x + 1)
+  // }
+  // TrainModel();
   return 0;
 }
