@@ -51,6 +51,18 @@ void info() {
     printf("\nExamples:\n");
     printf("./word2vec -train data.txt -output vec.txt -size 200 -window 5 -sample 1e-4 -negative 5 -hs 0 -binary 0 -cbow 1 -iter 3\n\n");    
 }
+
+int ArgPos(char *str, int argc, char **argv) {
+  int a;
+  for (a = 1; a < argc; a++) if (!strcmp(str, argv[a])) {
+    if (a == argc - 1) {
+      printf("Argument missing for %s\n", str);
+      exit(1);
+    }
+    return a;
+  }
+  return -1;
+}
 int main(int argc, char **argv) {
   if (argc == 1) {
     info();
