@@ -101,7 +101,7 @@ int main(int argc, char **argv) {
   }
   Word2vec w2v_model(model, train_method, iter, num_threads, layer1_size, window, negative, min_count, sample, alpha);
   w2v_model.learn_vocab_from_trainfile(train_file);
-  //w2v_model.train_model(train_file);
+  w2v_model.train_model(train_file);
   //w2v_model.save_vector(output_file);
   return 0;
 }
