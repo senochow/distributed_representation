@@ -56,13 +56,12 @@ private:
 	float* syn1;
 	// unordered_map<string, 
 	void train_model_thread(const string filename, int t_id);
+	void init_network();
+	void creat_huffman_tree();
 	// void read_words_from
 public:
 	Word2vec(string model, string train_method, int iter, int num_threads, int layer1_size, int window, int negative, int min_count, float sample, float alpha);
-	int learn_vocab_from_trainfile(const string train_file);
-	void init_network();
-	void creat_huffman_tree();
-	void train_model_thread(const string filename, int t_id);
+	int learn_vocab_from_trainfile(const string train_file);	
 	void train_model(const string train_file);
 	void save_vector(const string output_file);
 

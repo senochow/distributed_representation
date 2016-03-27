@@ -90,7 +90,7 @@ void Word2vec::creat_huffman_tree() {
 	}
 	// search path and set code & path
 	long long index;
-	int = code_len;
+	int code_len;
 	vector<int> code;
 	vector<long long> point;
 	for (i = 0; i < vocab_size; i++) {
@@ -105,8 +105,8 @@ void Word2vec::creat_huffman_tree() {
 		vocab[i]->code_len = code_len;
 		vocab[i]->point.push_back(vocab_size-2); // 0 is the root word
 		for (j = code_len-1; j >= 0; j--) {
-			vocab[i].code.push_back(code[j]);
-			vocab[i].code.push_back(point[j]-vocab_size);
+			vocab[i]->code.push_back(code[j]);
+			vocab[i]->code.push_back(point[j]-vocab_size);
 		}
 		code.clear();
 		point.clear();
