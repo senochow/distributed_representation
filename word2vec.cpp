@@ -138,12 +138,32 @@ void Word2vec::init_network() {
 }
 
 void Word2vec::train_model_thread(const string filename, int t_id) {
-
+	ifstream fin(filename.c_str(), ios::in);
+	fin.seekg(0, ios_base::end);
+	long long file_size = fin.tellg();
+	long long fbeg = file_size/num_threads*t_id, fend = file_size/num_threads*(tid+1);
+	if (fend > file_size) fend = file_size;
+	printf("%lld %lld %lld\n", fbeg, fend, file_size);
+	for (int i = 0; i < 10; i++) cout << t_id << "\t" << i << endl;
 }
 
 void Word2vec::train_model(const string train_file){
 	init_network();
-
+	ifstream fin(train_file.c_str(), ios::in);
+	if (!fin) {
+		cerr << "Can't open file " << train_file << endl;
+		return;
+	}
+	fin.close();
+	for (int i = 0; i < iter; i++) {
+		cout << "iter " << i << endl;
+		vector<thread> threads;
+		for (int j = 0; j < num_threads; j++) {
+			threads.push_back(thread(&train_model_thread, this, train_file, j));
+		}
+		for (int j = 0; j < num_threads; j++) threads[j].join();
+		cout << endl;
+	}
 }
 
 void Word2vec::save_vector(const string output_file) {
