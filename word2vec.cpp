@@ -37,7 +37,7 @@ Word2vec::Word2vec(string _model, string _train_method, int _iter, int _num_thre
 
 // vocab: vector<vocab_word>
 int Word2vec::learn_vocab_from_trainfile(const string train_file) {
-	ifstream fin(train_file.c_str(), ios::in);
+	ifstream fin(train_file, ios::in);
     long long train_words = 0;
 	if (!fin) {
 		cerr << "Can't read file " << train_file << endl;
@@ -138,18 +138,19 @@ void Word2vec::init_network() {
 }
 
 void Word2vec::train_model_thread(const string filename, int t_id) {
-	ifstream fin(filename.c_str(), ios::in);
-	fin.seekg(0, ios_base::end);
+	ifstream fin(filename, ios::in);
+    fin.seekg(0, ios::end);
 	long long file_size = fin.tellg();
-	long long fbeg = file_size/num_threads*t_id, fend = file_size/num_threads*(tid+1);
-	if (fend > file_size) fend = file_size;
-	printf("%lld %lld %lld\n", fbeg, fend, file_size);
-	for (int i = 0; i < 10; i++) cout << t_id << "\t" << i << endl;
+	long long fbeg = file_size/num_threads*t_id, fend;
+    if (t_id == num_threads-1) fend = file_size;
+    else fend = file_size/num_threads*(t_id+1);
+    //printf("%lld %lld %lld\n", fbeg, fend, file_size);
+
 }
 
 void Word2vec::train_model(const string train_file){
 	init_network();
-	ifstream fin(train_file.c_str(), ios::in);
+	ifstream fin(train_file, ios::in);
 	if (!fin) {
 		cerr << "Can't open file " << train_file << endl;
 		return;
@@ -159,7 +160,7 @@ void Word2vec::train_model(const string train_file){
 		cout << "iter " << i << endl;
 		vector<thread> threads;
 		for (int j = 0; j < num_threads; j++) {
-			threads.push_back(thread(&train_model_thread, this, train_file, j));
+			threads.push_back(thread(&Word2vec::train_model_thread, this, train_file, j));
 		}
 		for (int j = 0; j < num_threads; j++) threads[j].join();
 		cout << endl;

@@ -32,7 +32,7 @@ void info() {
     printf("\t-negative <int>\n");
     printf("\t\tNumber of negative examples; default is 5, common values are 3 - 10 (0 = not used)\n");
     printf("\t-threads <int>\n");
-    printf("\t\tUse <int> threads (default 12)\n");
+    printf("\t\tUse <int> threads (default 10)\n");
     printf("\t-iter <int>\n");
     printf("\t\tRun more training iterations (default 5)\n");
     printf("\t-min-count <int>\n");
@@ -74,7 +74,7 @@ int main(int argc, char **argv) {
   int layer1_size = 100, window = 5;
   string model = "cbow", train_method = "hs";
   float alpha = 0.025, sample = 0.001;
-  int num_threads = 1, iter = 1, min_count = 5, negative = 5;
+  int num_threads = 10, iter = 1, min_count = 5, negative = 5;
   if ((i = ArgPos((char *)"-size", argc, argv)) > 0) layer1_size = atoi(argv[i + 1]);
   if ((i = ArgPos((char *)"-train", argc, argv)) > 0) train_file = string(argv[i + 1]);
   if ((i = ArgPos((char *)"-save-vocab", argc, argv)) > 0) save_vocab_file = string(argv[i + 1]);
