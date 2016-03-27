@@ -71,7 +71,7 @@ int main(int argc, char **argv) {
   // set variable
   string train_file = "", output_file = "";
   string save_vocab_file = "", read_vocab_file = "";
-  int layer1_size = 0, window = 5;
+  int layer1_size = 100, window = 5;
   string model = "cbow", train_method = "hs";
   float alpha = 0.025, sample = 0.001;
   int num_threads = 1, iter = 1, min_count = 5, negative = 5;
@@ -101,7 +101,7 @@ int main(int argc, char **argv) {
   }
   Word2vec w2v_model(model, train_method, iter, num_threads, layer1_size, window, negative, min_count, sample, alpha);
   w2v_model.learn_vocab_from_trainfile(train_file);
-  w2v_model.train_model(train_file);
-  w2v_model.save_vector(output_file);
+  //w2v_model.train_model(train_file);
+  //w2v_model.save_vector(output_file);
   return 0;
 }

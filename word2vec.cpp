@@ -23,21 +23,22 @@ Word2vec::Word2vec(string _model, string _train_method, int _iter, int _num_thre
 	sample = _sample;
 	alpha = _alpha;
 	cout << "parameters \n";
-	cout << "model : " << model << endl;
-	cout << "train_method :" << train_method << endl;
-	cout << "iter : " << iter << endl;
-	cout << "number threads : " << num_threads << endl;
-	cout << "layer1_size: " << layer1_size << endl;
-	cout << "window : " << window << endl;
-	cout << "negative: " << negative << endl;
-	cout << "min_count : " << min_count << endl;
-	cout << "sample : " << sample << endl;
-	cout << "alpha : " << alpha << endl;
+	cout << "model: " << model << "\t";
+	cout << "train_method:" << train_method << "\t";
+	cout << "iter: " << iter << "\t";
+	cout << "number threads: " << num_threads << "\t";
+	cout << "layer1_size: " << layer1_size << "\t";
+	cout << "window: " << window << "\t";
+	cout << "negative: " << negative << "\t";
+	cout << "min_count: " << min_count << "\t";
+	cout << "sample: " << sample << "\t";
+	cout << "alpha: " << alpha << endl;
 }
 
 // vocab: vector<vocab_word>
 int Word2vec::learn_vocab_from_trainfile(const string train_file) {
 	ifstream fin(train_file.c_str(), ios::in);
+    long long train_words = 0;
 	if (!fin) {
 		cerr << "Can't read file " << train_file << endl;
 		return -1;
@@ -45,6 +46,7 @@ int Word2vec::learn_vocab_from_trainfile(const string train_file) {
 	unordered_map<string, long long> word_cnt;
 	string word;
 	while (fin >> word) {
+        train_words++;
 		word_cnt[word] += 1;
 	}
 	fin.close();
@@ -57,6 +59,7 @@ int Word2vec::learn_vocab_from_trainfile(const string train_file) {
 	}
 	vocab_size = vocab.size();
 	cout << "vocab size = " << vocab_size << endl;
+	cout << "words in training file: " << train_words << endl;
 	sort(vocab.begin(), vocab.end(), vocab_cmp);
 	return 1;
 }
