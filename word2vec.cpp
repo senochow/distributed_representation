@@ -142,10 +142,10 @@ void Word2vec::init_network() {
 }
 //read line 
 bool Word2vec::read_line(vector<int>& words, ifstream& fin, long long end) {
-	if (fin.eof() || fin.tellg >= end) return false;
+	if (fin.eof() || fin.tellg() >= end) return false;
 	string word;
 	char c;
-	while (words.size() < max_sentence_len) {
+	while (static_cast<int>(words.size()) < max_sentence_len) {
 		c = fin.get();
 		if (fin.eof()) return true;
 		if (c == ' ' || c == '\t' || c == '\n') {
@@ -184,7 +184,7 @@ void Word2vec::train_cbow(vector<int>& words, float cur_alpha) {
 		}
 		// context mean
 		for (j = 0; j < layer1_size; j++) neu1[j] /= c_cnt;
-		if (train_method == 'hs') {
+		if (train_method == "hs") {
 			// iter for every code
 			for (d = 0; d < vocab[cur_word]->code_len; d++) {
 				f = 0;
@@ -196,7 +196,7 @@ void Word2vec::train_cbow(vector<int>& words, float cur_alpha) {
 				// propogate error output->hidden
 				for (i = 0; i < layer1_size; i++) neu1e[i] += grad*syn1[i+q];
 				// Learn weights hidden -> outputfor 
-				for (i = 0; i < layer1_size; i++) syn1[i+q] += g*neu1[i];
+				for (i = 0; i < layer1_size; i++) syn1[i+q] += grad*neu1[i];
 			}
 		}
 		// hidden-> input
@@ -219,7 +219,7 @@ void Word2vec::train_model_thread(const string filename, int t_id) {
     if (t_id == num_threads-1) fend = file_size;
     else fend = file_size/num_threads*(t_id+1);
     // process file
-    fin.seekg(beg, ios::beg);
+    fin.seekg(fbeg, ios::beg);
     vector<int> words;
     // read each line 
     while (read_line(words, fin, fend)) {
