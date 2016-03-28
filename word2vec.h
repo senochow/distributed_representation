@@ -52,10 +52,15 @@ private:
 	float alpha;
 private:
 	vector<vocab_word *> vocab;
+	unordered_map<string, int> word2idx;
 	long long vocab_size;
+	int max_sentence_len;
 	float* syn0;
 	float* syn1;
 	void train_model_thread(const string filename, int t_id);
+	bool read_line(vector<int>& words, ifstream& fin, long long end);
+	void train_cbow(vector<int>& words, float cur_alpha);
+	void train_skip_gram(vector<int>& words, float cur_alpha);
 	void init_network();
 	void creat_huffman_tree();
 public:

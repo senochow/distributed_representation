@@ -69,6 +69,9 @@ int Word2vec::learn_vocab_from_trainfile(const string train_file) {
 	cout << "vocab size = " << vocab_size << endl;
 	cout << "words in training file: " << train_words << endl;
 	sort(vocab.begin(), vocab.end(), vocab_cmp);
+	for (int i = 0; i < vocab_size; i++) {
+		word2idx[vocab[i]->word] = i;
+	}
 	return 1;
 }
 
@@ -122,6 +125,7 @@ void Word2vec::creat_huffman_tree() {
 
 // init and creat tree: word vectors: syn0,  non-leaf node: syn1
 void Word2vec::init_network() {
+	max_sentence_len = 1000;
 	syn0 = new float[vocab_size*layer1_size];
 	if (train_method == "hs") {
 		syn1 = new float[vocab_size*layer1_size];
@@ -136,15 +140,96 @@ void Word2vec::init_network() {
 	}
 	creat_huffman_tree();
 }
+//read line 
+bool Word2vec::read_line(vector<int>& words, ifstream& fin, long long end) {
+	if (fin.eof() || fin.tellg >= end) return false;
+	string word;
+	char c;
+	while (words.size() < max_sentence_len) {
+		c = fin.get();
+		if (fin.eof()) return true;
+		if (c == ' ' || c == '\t' || c == '\n') {
+			if (!word.empty()) {
+				auto iter = word2idx.find(word);
+				if (iter != word2idx.end()) words.push_back(iter->second);
+				word.clear();
+			}
+			if (c == '\n') return true;
+		}else word.push_back(c);
+	}
+	return true;
 
+}
+void Word2vec::train_cbow(vector<int>& words, float cur_alpha) {
+	float* neu1 = new float[layer1_size];
+	float* neu1e = new float[layer1_size];
+	int sent_len = words.size();
+	if (sent_len <= 1) return;
+	int i, j, d, q;
+	float f, grad;
+	for (int cur_word = 0; cur_word < sent_len; cur_word++) {
+		// init context vector
+		for (i = 0; i < layer1_size; i++) {
+			neu1[i] = 0;
+			neu1e[i] = 0;
+		}
+		// set context = (window - b)
+		int b = rand()%window;// context : [1..window]
+		int c_beg = max(0, cur_word-window+b);
+		int c_end = min(sent_len-1, cur_word+window-b);
+		int c_cnt = c_end-c_beg;
+		for (i = c_beg; i <= c_end; i++) {
+			if (i == cur_word) continue;
+			for (j = 0; j < layer1_size; j++) neu1[j] += syn0[words[i]*layer1_size + j];
+		}
+		// context mean
+		for (j = 0; j < layer1_size; j++) neu1[j] /= c_cnt;
+		if (train_method == 'hs') {
+			// iter for every code
+			for (d = 0; d < vocab[cur_word]->code_len; d++) {
+				f = 0;
+				q = (vocab[cur_word]->point[d])*layer1_size;
+				// hidden->output
+				for (i = 0; i < layer1_size; i++) f += syn1[i+q]*neu1[i];
+				f = 1.0/(1.0+exp(-f));
+				grad = (1-vocab[cur_word]->code[d]-f)*cur_alpha;
+				// propogate error output->hidden
+				for (i = 0; i < layer1_size; i++) neu1e[i] += grad*syn1[i+q];
+				// Learn weights hidden -> outputfor 
+				for (i = 0; i < layer1_size; i++) syn1[i+q] += g*neu1[i];
+			}
+		}
+		// hidden-> input
+		for (i = c_beg; i <= c_end; i++) {
+			if (i == cur_word) continue;
+			for (j = 0; j < layer1_size; j++) syn0[words[i]*layer1_size + j] += neu1e[j];
+		}
+	}
+}
+
+void Word2vec::train_skip_gram(vector<int>& words, float cur_alpha) {
+
+}
 void Word2vec::train_model_thread(const string filename, int t_id) {
 	ifstream fin(filename, ios::in);
     fin.seekg(0, ios::end);
 	long long file_size = fin.tellg();
+	// 设置当前线程文件的读取范围
 	long long fbeg = file_size/num_threads*t_id, fend;
     if (t_id == num_threads-1) fend = file_size;
     else fend = file_size/num_threads*(t_id+1);
-    //printf("%lld %lld %lld\n", fbeg, fend, file_size);
+    // process file
+    fin.seekg(beg, ios::beg);
+    vector<int> words;
+    // read each line 
+    while (read_line(words, fin, fend)) {
+    	if (model == "cbow") {
+    		train_cbow(words, alpha);
+    	}else if (model == "sg") {
+    		train_skip_gram(words, alpha);
+    	}
+    	words.clear();
+    }
 
 }
 
