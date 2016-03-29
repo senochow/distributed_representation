@@ -198,7 +198,9 @@ void Word2vec::train_cbow(vector<int>& words, float cur_alpha) {
 				// Learn weights hidden -> outputfor 
 				for (i = 0; i < layer1_size; i++) syn1[i+q] += grad*neu1[i];
 			}
-		}
+		}else {
+            // negative sampling
+        }
 		// hidden-> input
 		for (i = c_beg; i <= c_end; i++) {
 			if (i == cur_word) continue;
