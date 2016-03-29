@@ -200,6 +200,7 @@ void Word2vec::train_cbow(vector<int>& words, float cur_alpha) {
 			}
 		}else {
             // negative sampling
+
         }
 		// hidden-> input
 		for (i = c_beg; i <= c_end; i++) {
