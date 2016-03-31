@@ -37,21 +37,21 @@ Word2vec::Word2vec(string _model, string _train_method, int _iter, int _num_thre
 
 // vocab: vector<vocab_word>
 int Word2vec::learn_vocab_from_trainfile(const string train_file) {
+    total_words = 0;
 	ifstream fin(train_file, ios::in);
-    long long train_words = 0;
 	if (!fin) {
 		cerr << "Can't read file " << train_file << endl;
 		return -1;
 	}
 	unordered_map<string, long long> word_cnt;
 	string word;
-    clock_t start, now;
+    clock_t now;
     start = clock();
 	while (fin >> word) {
-        train_words++;
+        total_words++;
 		word_cnt[word] += 1;
-        if (train_words%1000000 == 0) {
-            printf("%lldK%c", train_words / 1000, 13);
+        if (total_words%1000000 == 0) {
+            printf("%lldK%c", total_words / 1000, 13);
             fflush(stdout);
         }
 	}
@@ -67,7 +67,7 @@ int Word2vec::learn_vocab_from_trainfile(const string train_file) {
 	}
 	vocab_size = vocab.size();
 	cout << "vocab size = " << vocab_size << endl;
-	cout << "words in training file: " << train_words << endl;
+	cout << "words in training file: " << total_words << endl;
 	sort(vocab.begin(), vocab.end(), vocab_cmp);
 	for (int i = 0; i < vocab_size; i++) {
 		word2idx[vocab[i]->word] = i;
@@ -125,7 +125,10 @@ void Word2vec::creat_huffman_tree() {
 
 // init and creat tree: word vectors: syn0,  non-leaf node: syn1
 void Word2vec::init_network() {
+    // init global variable
 	max_sentence_len = 1000;
+    trained_words = 0;
+    // init network paramters
 	syn0 = new float[vocab_size*layer1_size];
 	if (train_method == "hs") {
 		syn1 = new float[vocab_size*layer1_size];
@@ -224,8 +227,21 @@ void Word2vec::train_model_thread(const string filename, int t_id) {
     // process file
     fin.seekg(fbeg, ios::beg);
     vector<int> words;
+    clock_t now;
+    long long word_cnt = 0, i = 0;
     // read each line 
     while (read_line(words, fin, fend)) {
+        i++;
+        word_cnt += words.size();
+        if (i % 1000 == 0) {
+            trained_words += word_cnt;
+            now = clock();
+            printf("%cAlpha: %f Progress: %.2f%% Words/thread/sec: %.2fk ", 13, alpha, 
+                    static_cast<float>(trained_words)/(iter*total_words+1)*100, 
+                    static_cast<float>(trained_words)/(static_cast<float>(now-start+1)/CLOCKS_PER_SEC*1000));
+            fflush(stdout);
+            word_cnt = 0;
+        }
     	if (model == "cbow") {
     		train_cbow(words, alpha);
     	}else if (model == "sg") {
@@ -237,13 +253,14 @@ void Word2vec::train_model_thread(const string filename, int t_id) {
 }
 
 void Word2vec::train_model(const string train_file){
-	init_network();
 	ifstream fin(train_file, ios::in);
 	if (!fin) {
 		cerr << "Can't open file " << train_file << endl;
 		return;
 	}
 	fin.close();
+    init_network();
+    start = clock();
 	for (int i = 0; i < iter; i++) {
 		cout << "iter " << i << endl;
 		vector<thread> threads;
@@ -253,6 +270,8 @@ void Word2vec::train_model(const string train_file){
 		for (int j = 0; j < num_threads; j++) threads[j].join();
 		cout << endl;
 	}
+    clock_t now = clock();
+    cout << "Total training time : " << static_cast<float>(now-start)/CLOCKS_PER_SEC << " s"<< endl;
 }
 
 void Word2vec::save_vector(const string output_file) {

@@ -54,7 +54,10 @@ private:
 	vector<vocab_word *> vocab;
 	unordered_map<string, int> word2idx;
 	long long vocab_size;
+    long long total_words;
+    long long trained_words; // processed words currently
 	int max_sentence_len;
+    clock_t start;
 	float* syn0;
 	float* syn1;
 	void train_model_thread(const string filename, int t_id);
