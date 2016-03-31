@@ -58,12 +58,20 @@ private:
     long long trained_words; // processed words currently
 	int max_sentence_len;
     clock_t start;
+    float start_alpha;
+    float min_alpha;
 	float* syn0;
 	float* syn1;
+	// negative sampling
+	float* syn1_negative;
+	int* table;
+	int table_size;
+    // function
 	void train_model_thread(const string filename, int t_id);
 	bool read_line(vector<int>& words, ifstream& fin, long long end);
 	void train_cbow(vector<int>& words, float cur_alpha);
 	void train_skip_gram(vector<int>& words, float cur_alpha);
+    void init_sample_table();
 	void init_network();
 	void creat_huffman_tree();
 public:
