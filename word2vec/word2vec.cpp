@@ -121,6 +121,8 @@ void Word2vec::creat_huffman_tree() {
 			vocab[i]->point.push_back(point[j]-vocab_size);
 		}
 	}
+    delete[] code;
+    delete[] point;
 }
 // init negative sample table
 void Word2vec::init_sample_table() {
@@ -263,6 +265,8 @@ void Word2vec::train_cbow(vector<int>& words, float cur_alpha) {
 			for (l = 0; l < layer1_size; l++) syn0[words[i]*layer1_size + l] += neu1e[l];
 		}
 	}
+    delete[] neu1;
+    delete[] neu1e;
 }
 
 void Word2vec::train_skip_gram(vector<int>& words, float cur_alpha) {
