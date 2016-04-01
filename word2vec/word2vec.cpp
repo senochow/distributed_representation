@@ -84,7 +84,8 @@ void Word2vec::creat_huffman_tree() {
 	for (i = 0; i < vocab_size; i++) count[i] = vocab[i]->cnt;
 	for (i = vocab_size; i < nodes_cnt; i++) count[i] = 1e15;
 	// create huffman tree, each time select two smallest node
-	for (i = 0; i < vocab_size; i++) {
+    // create n-1 non-leaf nodes 
+	for (i = 0; i < vocab_size-1; i++) {
 		if (pos1 >= 0) {
 			if (count[pos1] < count[pos2]) min1 = pos1--;
 			else min1 = pos2++;
@@ -102,8 +103,8 @@ void Word2vec::creat_huffman_tree() {
 	// search path and set code & path
 	long long index;
 	int code_len;
-    int* code = new int[100];
-	long long * point = new long long[100];
+    vector<int> code(100);
+    vector<long long> point(100);
 	for (i = 0; i < vocab_size; i++) {
 		index = i;
         code_len = 0;
@@ -121,8 +122,6 @@ void Word2vec::creat_huffman_tree() {
 			vocab[i]->point.push_back(point[j]-vocab_size);
 		}
 	}
-    delete[] code;
-    delete[] point;
 }
 // init negative sample table
 void Word2vec::init_sample_table() {
@@ -195,8 +194,10 @@ bool Word2vec::read_line(vector<int>& words, ifstream& fin, long long end) {
 
 }
 void Word2vec::train_cbow(vector<int>& words, float cur_alpha) {
-	float* neu1 = new float[layer1_size]; // record context mean
-	float* neu1e = new float[layer1_size]; // record backprob error from output->hidden
+	//float* neu1 = new float[layer1_size]; // record context mean
+    //float* neu1e = new float[layer1_size]; // record backprob error from output->hidden
+    vector<float> neu1(layer1_size);
+    vector<float> neu1e(layer1_size);
 	int sent_len = words.size();
 	int sample_word = 0, label = 0;
 	if (sent_len <= 1) return;
@@ -265,8 +266,8 @@ void Word2vec::train_cbow(vector<int>& words, float cur_alpha) {
 			for (l = 0; l < layer1_size; l++) syn0[words[i]*layer1_size + l] += neu1e[l];
 		}
 	}
-    delete[] neu1;
-    delete[] neu1e;
+    //delete[] neu1;
+    //delete[] neu1e;
 }
 
 void Word2vec::train_skip_gram(vector<int>& words, float cur_alpha) {
