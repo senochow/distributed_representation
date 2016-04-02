@@ -74,7 +74,7 @@ int main(int argc, char **argv) {
   int layer1_size = 100, window = 5;
   string model = "cbow", train_method = "hs";
   float alpha = 0.025, sample = 0.001;
-  int num_threads = 10, iter = 1, min_count = 5, negative = 5;
+  int num_threads = 10, iter = 1, min_count = 5, negative = 0;
   if ((i = ArgPos((char *)"-size", argc, argv)) > 0) layer1_size = atoi(argv[i + 1]);
   if ((i = ArgPos((char *)"-train", argc, argv)) > 0) train_file = string(argv[i + 1]);
   if ((i = ArgPos((char *)"-save-vocab", argc, argv)) > 0) save_vocab_file = string(argv[i + 1]);
@@ -102,6 +102,6 @@ int main(int argc, char **argv) {
   Word2vec w2v_model(model, train_method, iter, num_threads, layer1_size, window, negative, min_count, sample, alpha);
   w2v_model.learn_vocab_from_trainfile(train_file);
   w2v_model.train_model(train_file);
-  //w2v_model.save_vector(output_file);
+  w2v_model.save_vector(output_file);
   return 0;
 }

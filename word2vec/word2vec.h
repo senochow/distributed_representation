@@ -66,6 +66,7 @@ private:
 	float* syn1_negative;
 	int* table;
 	int table_size;
+    int max_code_len;
     // function
 	void train_model_thread(const string filename, int t_id);
 	bool read_line(vector<int>& words, ifstream& fin, long long end);
