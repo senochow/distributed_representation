@@ -52,7 +52,7 @@ private:
 	float alpha;
 private:
 	vector<vocab_word *> vocab;
-	unordered_map<string, int> word2idx;
+	unordered_map<string, long long> word2idx;
 	long long vocab_size;
     long long total_words;
     long long trained_words; // processed words currently
@@ -69,9 +69,9 @@ private:
     int max_code_len;
     // function
 	void train_model_thread(const string filename, int t_id);
-	bool read_line(vector<int>& words, ifstream& fin, long long end);
-	void train_cbow(vector<int>& words, float cur_alpha);
-	void train_skip_gram(vector<int>& words, float cur_alpha);
+	bool read_line(vector<long long>& words, ifstream& fin, long long end);
+	void train_cbow(vector<long long>& words, float cur_alpha);
+	void train_skip_gram(vector<long long>& words, float cur_alpha);
     void init_sample_table();
 	void init_network();
 	void creat_huffman_tree();

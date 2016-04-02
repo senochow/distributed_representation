@@ -176,7 +176,7 @@ void Word2vec::init_network() {
 	creat_huffman_tree();
 }
 //read line 
-bool Word2vec::read_line(vector<int>& words, ifstream& fin, long long end) {
+bool Word2vec::read_line(vector<long long>& words, ifstream& fin, long long end) {
 	if (fin.eof() || fin.tellg() >= end) return false;
 	string word;
 	char c;
@@ -195,17 +195,18 @@ bool Word2vec::read_line(vector<int>& words, ifstream& fin, long long end) {
 	return true;
 
 }
-void Word2vec::train_cbow(vector<int>& words, float cur_alpha) {
-	//float* neu1 = new float[layer1_size]; // record context mean
-    //float* neu1e = new float[layer1_size]; // record backprob error from output->hidden
+// context predict center words, p(w_i | c_i);
+void Word2vec::train_cbow(vector<long long>& words, float cur_alpha) {
     vector<float> neu1(layer1_size, 0);
-    vector<float> neu1e(layer1_size, 0);
+    vector<float> neu1e(layer1_size, 0); // save hidden neura errors
 	int sent_len = words.size();
-	int sample_word = 0, label = 0;
 	if (sent_len <= 1) return;
-	int l, q; // l for layer index
+	int l, q, label; // l for layer index
 	float f, grad;
-	for (int cur_word = 0; cur_word < sent_len; cur_word++) {
+	long long cur_word, sample_word;
+	// for each word index
+	for (int index = 0; index < sent_len; index++) {
+		cur_word = words[index];
 		// init context vector
 		for (l = 0; l < layer1_size; l++) {
 			neu1[l] = 0;
@@ -213,11 +214,11 @@ void Word2vec::train_cbow(vector<int>& words, float cur_alpha) {
 		}
 		// set context = (window - b)
 		int b = rand()%window;// context : [1..window]
-		int c_beg = max(0, cur_word-window+b);
-		int c_end = min(sent_len-1, cur_word+window-b);
+		int c_beg = max(0, index-window+b);
+		int c_end = min(sent_len-1, index+window-b);
 		int c_cnt = c_end-c_beg;
 		for (int i = c_beg; i <= c_end; i++) {
-			if (i == cur_word) continue;
+			if (i == index) continue; // pass cur_word index
 			for (l = 0; l < layer1_size; l++) neu1[l] += syn0[words[i]*layer1_size + l];
 		}
 		// context mean
@@ -274,8 +275,66 @@ void Word2vec::train_cbow(vector<int>& words, float cur_alpha) {
 // huffman: f = sigmoid(q_k * w_j), grad = (1-code[k]-f)*alpha
 // bp errors from ouput to hidden: neu1e += grad*q_k
 // update q_k : q_k += grad*neu1   where neu1 = w_j 
-void Word2vec::train_skip_gram(vector<int>& words, float cur_alpha) {
-	
+void Word2vec::train_skip_gram(vector<long long>& words, float cur_alpha) {
+	vector<float> neu1e(layer1_size, 0);
+	long long cur_word, sample_word;
+	int l = 0, d = 0, label = 0;
+	float f, grad;
+	long long l1, l2;
+	for (int index = 0; index < words.size(); index++) {
+		cur_word = words[index];
+		// get context of cur_words
+		int b = rand()%window;// b~[0..window-1] context: window-b ~ [1..window]
+		int c_beg = max(0, index-window+b);
+		int c_end = min(sent_len-1, index+window-b);
+		int c_cnt = c_end-c_beg;
+		for (int c_index = c_beg; c_index <= c_end; c_index++) {
+			if (c_index == index) continue;
+			for (l = 0; l < layer1_size; l++) neu1e[l] = 0;
+			sample_word = words[c_index];
+			l1 = sample_word*layer1_size;
+			// using hs
+			if (train_method == "hs") {
+				for (d = 0; d < vocab[cur_word]->code_len; d++) {
+					f = 0;
+					l2 = vocab[cur_word]->point[d] * layer1_size;
+					for (l = 0; l <layer1_size; l++) f += syn0[l1 + l] * syn1[l2 + l];
+					f = 1.0/(1+exp(-f));
+					grad = (1-vocab[cur_word]->code[d]-f)*cur_alpha;
+					// back error from output -> hidden;
+					for (l = 0; l < layer1_size; l++) neu1e[l] += grad*syn1[l2 + l];
+					// update non-leaf weights
+					for (l = 0; l < layer1_size; l++) syn1[l2 + l] += grad*syn0[l1 + l];
+				}
+			}
+			// using negative sampling
+			if (negative > 0) {
+				for (int k = 0; k < negative+1; k++) {
+					if (k == 0) {
+						sample_word = cur_word;
+						label = 1;
+					}else {
+						sample_word = table[rand()%table_size];
+						if (sample_word == cur_word) continue;
+						label = 0;
+					}
+					l2 = sample_word*layer1_size;
+					f = 0;
+					for (l = 0; l < layer1_size; l++) f += syn0[l1 + l] * syn1_negative[l2 + l];
+					f = 1.0/(1+exp(-f));
+					grad = (label - f)*cur_alpha;
+					// bp : ouput->hidden
+					for (l = 0; l < layer1_size; l++) neu1e[l] += grad * syn1_negative[l2 + l];
+					// update 
+					for (l = 0; l < layer1_size; l++) syn1_negative[l2+l] += grad*syn0[l1 + l];
+				}
+			}
+			// update cur word
+			for (l = 0; l < layer1_size; l++) syn0[l1 + l] += neu1e[l]; 
+		}
+
+
+	}
 }
 void Word2vec::train_model_thread(const string filename, int t_id) {
 	ifstream fin(filename, ios::in);
@@ -287,14 +346,14 @@ void Word2vec::train_model_thread(const string filename, int t_id) {
     else fend = file_size/num_threads*(t_id+1);
     // process file
     fin.seekg(fbeg, ios::beg);
-    vector<int> words;
+    vector<long long> words;
     clock_t now;
-    long long word_cnt = 0, i = 0;
+    long long word_cnt = 0, line_num = 0;
     // read each line 
     while (read_line(words, fin, fend)) {
-        i++;
+        line_num++;
         word_cnt += words.size();
-        if (i % 1000 == 0) {
+        if (line_num % 1000 == 0) {
             trained_words += word_cnt;
             now = clock();
             printf("%cAlpha: %f Progress: %.2f%% Words/thread/sec: %.2fk ", 13, alpha, 
