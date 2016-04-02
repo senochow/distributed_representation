@@ -277,17 +277,17 @@ void Word2vec::train_cbow(vector<long long>& words, float cur_alpha) {
 // update q_k : q_k += grad*neu1   where neu1 = w_j 
 void Word2vec::train_skip_gram(vector<long long>& words, float cur_alpha) {
 	vector<float> neu1e(layer1_size, 0);
+    int sent_len = words.size();
 	long long cur_word, sample_word;
 	int l = 0, d = 0, label = 0;
 	float f, grad;
 	long long l1, l2;
-	for (int index = 0; index < words.size(); index++) {
+	for (int index = 0; index < sent_len; index++) {
 		cur_word = words[index];
 		// get context of cur_words
 		int b = rand()%window;// b~[0..window-1] context: window-b ~ [1..window]
 		int c_beg = max(0, index-window+b);
 		int c_end = min(sent_len-1, index+window-b);
-		int c_cnt = c_end-c_beg;
 		for (int c_index = c_beg; c_index <= c_end; c_index++) {
 			if (c_index == index) continue;
 			for (l = 0; l < layer1_size; l++) neu1e[l] = 0;
