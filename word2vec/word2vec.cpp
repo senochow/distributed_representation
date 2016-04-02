@@ -56,13 +56,16 @@ int Word2vec::learn_vocab_from_trainfile(const string& train_file) {
         }
 	}
     now = clock();
-    cout << "Loading words end !  consume time : " << static_cast<float>(now-start)/CLOCKS_PER_SEC << "s" << endl;
+    cout << "Loading words: "<< total_words << " end !  consume time : " << static_cast<float>(now-start)/CLOCKS_PER_SEC << "s" << endl;
 	fin.close();
 	// remove word that cnt < min_cnt
+    // remember to reset total words cnt
+    total_words = 0;
 	for (auto iter = word_cnt.begin(); iter != word_cnt.end(); iter++) {
 		if (iter->second >= min_count) {
 			vocab_word* vw = new vocab_word(iter->first, iter->second);
 			vocab.push_back(vw);
+            total_words += iter->second;
 		}
 	}
 	vocab_size = vocab.size();
@@ -176,7 +179,7 @@ void Word2vec::init_network() {
 	creat_huffman_tree();
 }
 //read line 
-bool Word2vec::read_line(vector<long long>& words, ifstream& fin, long long end) {
+bool Word2vec::read_line(vector<long long>& words, int& cur_words, ifstream& fin, long long end) {
 	if (fin.eof() || fin.tellg() >= end) return false;
 	string word;
 	char c;
@@ -189,6 +192,7 @@ bool Word2vec::read_line(vector<long long>& words, ifstream& fin, long long end)
 				auto iter = word2idx.find(word);
                 // some infrequent words will be remove before
 				if (iter != word2idx.end()) {
+                    cur_words++;
                     if (sample > 0) {
                         //  sub sampling with probability: p = 1-sqrt(sample/freq)-sample/freq
                         float p = sample*total_words/vocab[iter->second]->cnt;
@@ -361,8 +365,9 @@ void Word2vec::train_model_thread(const string filename, int t_id) {
     clock_t now;
     long long word_cnt = 0, pre_word_cnt = 0;
     // read each line 
-    while (read_line(words, fin, fend)) {
-        word_cnt += words.size();
+    int cur_words = 0;
+    while (read_line(words, cur_words, fin, fend)) {
+        word_cnt += cur_words;
         // shrinkage learning rate every 10k words
         if (word_cnt-pre_word_cnt > 10000) {
             trained_words += word_cnt-pre_word_cnt;
@@ -381,6 +386,7 @@ void Word2vec::train_model_thread(const string filename, int t_id) {
     		train_skip_gram(words, alpha);
     	}
     	words.clear();
+        cur_words = 0;
     }
     fin.close();
 }

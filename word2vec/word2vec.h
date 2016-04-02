@@ -69,7 +69,7 @@ private:
     int max_code_len;
     // function
 	void train_model_thread(const string filename, int t_id);
-	bool read_line(vector<long long>& words, ifstream& fin, long long end);
+	bool read_line(vector<long long>& words, int& cur_words, ifstream& fin, long long end);
 	void train_cbow(vector<long long>& words, float cur_alpha);
 	void train_skip_gram(vector<long long>& words, float cur_alpha);
     void init_sample_table();
