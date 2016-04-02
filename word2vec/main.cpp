@@ -28,13 +28,13 @@ void info() {
     printf("\t\tSet threshold for occurrence of words. Those that appear with higher frequency in the training data\n");
     printf("\t\twill be randomly down-sampled; default is 1e-3, useful range is (0, 1e-5)\n");
     printf("\t-hs <int>\n");
-    printf("\t\tUse Hierarchical Softmax; default is 0 (not used)\n");
+    printf("\t\tUse Hierarchical Softmax; default is 1 (used)\n");
     printf("\t-negative <int>\n");
-    printf("\t\tNumber of negative examples; default is 5, common values are 3 - 10 (0 = not used)\n");
+    printf("\t\tNumber of negative examples; default is 0(not used), common values are 3 - 10\n");
     printf("\t-threads <int>\n");
     printf("\t\tUse <int> threads (default 10)\n");
     printf("\t-iter <int>\n");
-    printf("\t\tRun more training iterations (default 5)\n");
+    printf("\t\tRun more training iterations (default 1)\n");
     printf("\t-min-count <int>\n");
     printf("\t\tThis will discard words that appear less than <int> times; default is 5\n");
     printf("\t-alpha <float>\n");
@@ -72,14 +72,16 @@ int main(int argc, char **argv) {
   string train_file = "", output_file = "";
   string save_vocab_file = "", read_vocab_file = "";
   int layer1_size = 100, window = 5;
-  string model = "cbow", train_method = "hs";
-  float alpha = 0.025, sample = 0.001;
-  int num_threads = 10, iter = 1, min_count = 5, negative = 0;
+  string model = "cbow";
+  int hs = 1, negative = 0;
+  float alpha = 0.025, sample = 1e-3;
+  int num_threads = 10, iter = 1, min_count = 5;
   if ((i = ArgPos((char *)"-size", argc, argv)) > 0) layer1_size = atoi(argv[i + 1]);
   if ((i = ArgPos((char *)"-train", argc, argv)) > 0) train_file = string(argv[i + 1]);
   if ((i = ArgPos((char *)"-save-vocab", argc, argv)) > 0) save_vocab_file = string(argv[i + 1]);
   if ((i = ArgPos((char *)"-read-vocab", argc, argv)) > 0) read_vocab_file= string(argv[i + 1]);
   if ((i = ArgPos((char *)"-model", argc, argv)) > 0) model = string(argv[i+1]);
+  if ((i = ArgPos((char *)"-hs", argc, argv)) > 0) hs = atoi(argv[i+1]);
   if ((i = ArgPos((char *)"-alpha", argc, argv)) > 0) alpha = atof(argv[i + 1]);
   if ((i = ArgPos((char *)"-output", argc, argv)) > 0) output_file = string(argv[i + 1]);
   if ((i = ArgPos((char *)"-window", argc, argv)) > 0) window = atoi(argv[i + 1]);
@@ -99,6 +101,8 @@ int main(int argc, char **argv) {
   	cerr << "Missing output_file" << endl;
   	return 0;
   }
+  string train_method = "hs";
+  if (!hs) train_method = "ns";
   Word2vec w2v_model(model, train_method, iter, num_threads, layer1_size, window, negative, min_count, sample, alpha);
   w2v_model.learn_vocab_from_trainfile(train_file);
   w2v_model.train_model(train_file);

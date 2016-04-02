@@ -36,7 +36,7 @@ Word2vec::Word2vec(string _model, string _train_method, int _iter, int _num_thre
 }
 
 // vocab: vector<vocab_word>
-int Word2vec::learn_vocab_from_trainfile(const string train_file) {
+int Word2vec::learn_vocab_from_trainfile(const string& train_file) {
     total_words = 0;
 	ifstream fin(train_file, ios::in);
 	if (!fin) {
@@ -180,13 +180,24 @@ bool Word2vec::read_line(vector<long long>& words, ifstream& fin, long long end)
 	if (fin.eof() || fin.tellg() >= end) return false;
 	string word;
 	char c;
+    int random = 0;
 	while (static_cast<int>(words.size()) < max_sentence_len) {
 		c = fin.get();
 		if (fin.eof()) return true;
 		if (c == ' ' || c == '\t' || c == '\n') {
 			if (!word.empty()) {
 				auto iter = word2idx.find(word);
-				if (iter != word2idx.end()) words.push_back(iter->second);
+                // some infrequent words will be remove before
+				if (iter != word2idx.end()) {
+                    if (sample > 0) {
+                        //  sub sampling with probability: p = 1-sqrt(sample/freq)-sample/freq
+                        float p = sample*total_words/vocab[iter->second]->cnt;
+                        p = sqrt(p) + p;
+                        random = static_cast<double>(rand())/RAND_MAX;
+                        if (p < random) continue;
+                    }
+                    words.push_back(iter->second);
+                }
 				word.clear();
 			}
 			if (c == '\n') return true;
@@ -325,7 +336,7 @@ void Word2vec::train_skip_gram(vector<long long>& words, float cur_alpha) {
 					grad = (label - f)*cur_alpha;
 					// bp : ouput->hidden
 					for (l = 0; l < layer1_size; l++) neu1e[l] += grad * syn1_negative[l2 + l];
-					// update 
+					// update syn1_neg 
 					for (l = 0; l < layer1_size; l++) syn1_negative[l2+l] += grad*syn0[l1 + l];
 				}
 			}
@@ -348,13 +359,14 @@ void Word2vec::train_model_thread(const string filename, int t_id) {
     fin.seekg(fbeg, ios::beg);
     vector<long long> words;
     clock_t now;
-    long long word_cnt = 0, line_num = 0;
+    long long word_cnt = 0, pre_word_cnt = 0;
     // read each line 
     while (read_line(words, fin, fend)) {
-        line_num++;
         word_cnt += words.size();
-        if (line_num % 1000 == 0) {
-            trained_words += word_cnt;
+        // shrinkage learning rate every 10k words
+        if (word_cnt-pre_word_cnt > 10000) {
+            trained_words += word_cnt-pre_word_cnt;
+            pre_word_cnt = word_cnt;
             now = clock();
             printf("%cAlpha: %f Progress: %.2f%% Words/thread/sec: %.2fk ", 13, alpha, 
                     static_cast<float>(trained_words)/(iter*total_words+1)*100, 
@@ -362,11 +374,10 @@ void Word2vec::train_model_thread(const string filename, int t_id) {
             fflush(stdout);
             alpha = start_alpha*(1- static_cast<float>(trained_words)/(iter*total_words+1));
             if (alpha < min_alpha) alpha = min_alpha;
-            word_cnt = 0;
         }
     	if (model == "cbow") {
     		train_cbow(words, alpha);
-    	}else if (model == "sg") {
+    	}else if (model == "sk") {
     		train_skip_gram(words, alpha);
     	}
     	words.clear();
@@ -374,7 +385,7 @@ void Word2vec::train_model_thread(const string filename, int t_id) {
     fin.close();
 }
 
-void Word2vec::train_model(const string train_file){
+void Word2vec::train_model(const string& train_file){
 	ifstream fin(train_file, ios::in);
 	if (!fin) {
 		cerr << "Can't open file " << train_file << endl;
@@ -396,7 +407,7 @@ void Word2vec::train_model(const string train_file){
     cout << "Total training time : " << static_cast<float>(now-start)/(CLOCKS_PER_SEC*60) << " s"<< endl;
 }
 
-void Word2vec::save_vector(const string output_file) {
+void Word2vec::save_vector(const string& output_file) {
 	ofstream fout(output_file, ios::out);
 	fout << vocab_size << " " << layer1_size << endl;
 	for (long long i = 0; i < vocab_size; i++) {
