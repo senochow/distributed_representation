@@ -264,9 +264,13 @@ void Word2vec::train_cbow(vector<int>& words, float cur_alpha) {
 		}
 	}
 }
-
+// skip-gram model: center word i to predict context word j where (-c <= j <= c && j != 0) ; 
+// equivalent : sum_words:sum_context:p(w_j|w_i) = sum_words:sum_context:p(w_i | w_j)
+// huffman: f = sigmoid(q_k * w_j), grad = (1-code[k]-f)*alpha
+// bp errors from ouput to hidden: neu1e += grad*q_k
+// update q_k : q_k += grad*neu1   where neu1 = w_j 
 void Word2vec::train_skip_gram(vector<int>& words, float cur_alpha) {
-
+	
 }
 void Word2vec::train_model_thread(const string filename, int t_id) {
 	ifstream fin(filename, ios::in);
