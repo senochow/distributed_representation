@@ -75,6 +75,7 @@ int Word2vec::learn_vocab_from_trainfile(const string train_file) {
 	return 1;
 }
 
+// tree length is log(V)
 void Word2vec::creat_huffman_tree() {
 	long long nodes_cnt = 2 * vocab_size;
 	long long i, j, min1, min2, pos1 = vocab_size-1, pos2 = vocab_size;
@@ -103,8 +104,8 @@ void Word2vec::creat_huffman_tree() {
 	// search path and set code & path
 	long long index;
 	int code_len;
-    vector<int> code(100);
-    vector<long long> point(100);
+    vector<int> code(max_code_len);
+    vector<long long> point(max_code_len);
 	for (i = 0; i < vocab_size; i++) {
 		index = i;
         code_len = 0;
@@ -147,6 +148,7 @@ void Word2vec::init_network() {
 	max_sentence_len = 1000;
     trained_words = 0;
     long long i, j;
+    max_code_len = 40;
     table_size = 1e8;
     start_alpha = alpha;
     min_alpha = start_alpha*0.0001;
@@ -196,8 +198,8 @@ bool Word2vec::read_line(vector<int>& words, ifstream& fin, long long end) {
 void Word2vec::train_cbow(vector<int>& words, float cur_alpha) {
 	//float* neu1 = new float[layer1_size]; // record context mean
     //float* neu1e = new float[layer1_size]; // record backprob error from output->hidden
-    vector<float> neu1(layer1_size);
-    vector<float> neu1e(layer1_size);
+    vector<float> neu1(layer1_size, 0);
+    vector<float> neu1e(layer1_size, 0);
 	int sent_len = words.size();
 	int sample_word = 0, label = 0;
 	if (sent_len <= 1) return;
@@ -266,8 +268,6 @@ void Word2vec::train_cbow(vector<int>& words, float cur_alpha) {
 			for (l = 0; l < layer1_size; l++) syn0[words[i]*layer1_size + l] += neu1e[l];
 		}
 	}
-    //delete[] neu1;
-    //delete[] neu1e;
 }
 
 void Word2vec::train_skip_gram(vector<int>& words, float cur_alpha) {
@@ -330,7 +330,7 @@ void Word2vec::train_model(const string train_file){
 		cout << endl;
 	}
     clock_t now = clock();
-    cout << "Total training time : " << static_cast<float>(now-start)/CLOCKS_PER_SEC << " s"<< endl;
+    cout << "Total training time : " << static_cast<float>(now-start)/(CLOCKS_PER_SEC*60) << " s"<< endl;
 }
 
 void Word2vec::save_vector(const string output_file) {
