@@ -280,7 +280,7 @@ void Word2vec::train_cbow(vector<long long>& words, float cur_alpha) {
 		}
 		// update word vectors of word's context words , hidden-> input
 		for (int i = c_beg; i <= c_end; i++) {
-			if (i == cur_word) continue;
+			if (i == index) continue;
 			for (l = 0; l < layer1_size; l++) syn0[words[i]*layer1_size + l] += neu1e[l];
 		}
 	}
