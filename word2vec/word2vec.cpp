@@ -211,6 +211,10 @@ bool Word2vec::read_line(vector<long long>& words, int& cur_words, ifstream& fin
 
 }
 // context predict center words, p(w_i | c_i);
+// hidden layer : average of all context words of cur_word
+// hs: grad = (1-code-f)*alpha
+// neg: grad = (label-f)*alpha
+// neu1e save error for update input context words excluded cur_word iteself
 void Word2vec::train_cbow(vector<long long>& words, float cur_alpha) {
     vector<float> neu1(layer1_size, 0);
     vector<float> neu1e(layer1_size, 0); // save hidden neura errors
@@ -271,16 +275,16 @@ void Word2vec::train_cbow(vector<long long>& words, float cur_alpha) {
 				f = 0;
 				for (l = 0; l < layer1_size; l++) f += neu1[l] * syn1_negative[l2+l];
 				f = 1.0/(1.0+exp(-f));
-				grad = (label-f)*cur_alpha;
+				grad = (label-f)*cur_alpha; // grad fro current instance
 				//output->hidden
-				for (l = 0; l < layer1_size; l++) neu1[l] += grad*syn1_negative[l2+l];
+				for (l = 0; l < layer1_size; l++) neu1e[l] += grad*syn1_negative[l2+l];
 				// learn weights from hidden->out
 				for (l = 0; l < layer1_size; l++) syn1_negative[l2+l] += grad*neu1[l];
 			}
 		}
 		// update word vectors of word's context words , hidden-> input
 		for (int i = c_beg; i <= c_end; i++) {
-			if (i == index) continue;
+			if (i == index) continue; // pass cur_word index 
 			for (l = 0; l < layer1_size; l++) syn0[words[i]*layer1_size + l] += neu1e[l];
 		}
 	}
@@ -290,6 +294,7 @@ void Word2vec::train_cbow(vector<long long>& words, float cur_alpha) {
 // huffman: f = sigmoid(q_k * w_j), grad = (1-code[k]-f)*alpha
 // bp errors from ouput to hidden: neu1e += grad*q_k
 // update q_k : q_k += grad*neu1   where neu1 = w_j 
+// Update input word: when using the equivalent expression, we update each context word of cur word. while cbow update all context word of cur.
 void Word2vec::train_skip_gram(vector<long long>& words, float cur_alpha) {
 	vector<float> neu1e(layer1_size, 0);
     int sent_len = words.size();
@@ -344,10 +349,9 @@ void Word2vec::train_skip_gram(vector<long long>& words, float cur_alpha) {
 					for (l = 0; l < layer1_size; l++) syn1_negative[l2+l] += grad*syn0[l1 + l];
 				}
 			}
-			// update cur word
+			// update cur context word which is the input word.
 			for (l = 0; l < layer1_size; l++) syn0[l1 + l] += neu1e[l]; 
 		}
-
 
 	}
 }
