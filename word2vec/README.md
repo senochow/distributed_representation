@@ -8,4 +8,5 @@ List:
 * trained words caculate error, subsample words is included
 * vector index and word index in vocab is not equal
 * create huffman tree: create n-1 non-leaf nodes
+* know which word to update at each step: update input words vector not iteself
 
