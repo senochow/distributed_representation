@@ -9,4 +9,5 @@ List:
 * vector index and word index in vocab is not equal
 * create huffman tree: create n-1 non-leaf nodes
 * know which word to update at each step: update input words vector not iteself
+* Key points: upadte rule for hs and negtive sample
 
