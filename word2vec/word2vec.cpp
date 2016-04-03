@@ -11,6 +11,19 @@
 */
 #include "word2vec.h"
 
+typedef unsigned int uint32_t;
+float rsqrt(float number){
+    uint32_t i;
+    float x2, y;
+    x2 = number * 0.5F;
+    y  = number;
+    i  = *(uint32_t *) &y;
+    i  = 0x5f3759df - ( i >> 1 );
+    y  = *(float *) &i;
+    y  = y * ( 1.5F - ( x2 * y * y ) );
+    return y;
+}
+
 Word2vec::Word2vec(string _model, string _train_method, int _iter, int _num_threads, int _layer1_size, int _window, int _negative, int _min_count, float _sample, float _alpha){
 	model = _model;
 	train_method = _train_method;
@@ -23,16 +36,16 @@ Word2vec::Word2vec(string _model, string _train_method, int _iter, int _num_thre
 	sample = _sample;
 	alpha = _alpha;
 	cout << "parameters \n";
-	cout << "model: " << model << "\t";
-	cout << "train_method:" << train_method << "\t";
-	cout << "iter: " << iter << "\t";
-	cout << "number threads: " << num_threads << "\t";
-	cout << "layer1_size: " << layer1_size << "\t";
-	cout << "window: " << window << "\t";
-	cout << "negative: " << negative << "\t";
-	cout << "min_count: " << min_count << "\t";
-	cout << "sample: " << sample << "\t";
-	cout << "alpha: " << alpha << endl;
+	cout << "'model': " << model << ", ";
+	cout << "'train_method': " << train_method << ", ";
+	cout << "'iter': " << iter << ", ";
+	cout << "'number threads': " << num_threads << ", ";
+	cout << "'layer1_size': " << layer1_size << ", ";
+	cout << "'window': " << window << ", ";
+	cout << "'negative': " << negative << ", ";
+	cout << "'min_count': " << min_count << ", ";
+	cout << "'sample': " << sample << ", ";
+	cout << "'alpha': " << alpha << endl;
 }
 
 // vocab: vector<vocab_word>
@@ -43,10 +56,11 @@ int Word2vec::learn_vocab_from_trainfile(const string& train_file) {
 		cerr << "Can't read file " << train_file << endl;
 		return -1;
 	}
+    cout <<"Loading training file : " << train_file << endl;
 	unordered_map<string, long long> word_cnt;
 	string word;
-    clock_t now;
-    start = clock();
+    clock_t load_beg, load_end;
+    load_beg = clock();
 	while (fin >> word) {
         total_words++;
 		word_cnt[word] += 1;
@@ -55,8 +69,8 @@ int Word2vec::learn_vocab_from_trainfile(const string& train_file) {
             fflush(stdout);
         }
 	}
-    now = clock();
-    cout << "Loading words: "<< total_words << " end !  consume time : " << static_cast<float>(now-start)/CLOCKS_PER_SEC << "s" << endl;
+    load_end = clock();
+    cout << "Loading words: "<< total_words << " end !  consume time : " << static_cast<float>(load_end-load_beg)/(CLOCKS_PER_SEC*60) << " m" << endl;
 	fin.close();
 	// remove word that cnt < min_cnt
     // remember to reset total words cnt
@@ -157,6 +171,7 @@ void Word2vec::init_network() {
     min_alpha = start_alpha*0.0001;
     // init network paramters
 	syn0 = new float[vocab_size*layer1_size];
+	syn0_gdsq = new float[vocab_size*layer1_size];
 	if (train_method == "hs") {
 		syn1 = new float[vocab_size*layer1_size];
 		for (i = 0; i < vocab_size; i++) {
@@ -166,15 +181,21 @@ void Word2vec::init_network() {
 	// if using negative sampling , init syn1_negative
 	if (negative > 0) {
 		syn1_negative = new float[vocab_size*layer1_size];
+        syn1_neg_gdsq = new float[vocab_size*layer1_size];
 		for (i = 0; i < vocab_size; i++) {
-			for (j = 0; j < layer1_size; j++) syn1_negative[i*layer1_size+j] = 0;
+			for (j = 0; j < layer1_size; j++) {
+                syn1_negative[i*layer1_size+j] = 0;
+                syn1_neg_gdsq[i*layer1_size+j] = 1e-8;
 		}
 		init_sample_table();
 	}
     // init word vectors 
 	float init_bound = 1.0f/layer1_size;
 	for (i = 0; i < vocab_size; i++) {
-		for (j = 0; j < layer1_size; j++) syn0[i*layer1_size+j] = init_bound*(static_cast<float>(rand())/RAND_MAX - 0.5f);
+		for (j = 0; j < layer1_size; j++) {
+            syn0[i*layer1_size+j] = init_bound*(static_cast<float>(rand())/RAND_MAX - 0.5f);
+            syn0_gdsq[i*layer1_size+j] = 1e-8;
+        }
 	}
 	creat_huffman_tree();
 }
@@ -403,6 +424,8 @@ void Word2vec::train_model(const string& train_file){
 	}
 	fin.close();
     init_network();
+    clock_t train_beg, train_end;
+    train_beg = clock();
     start = clock();
 	for (int i = 0; i < iter; i++) {
 		cout << "iter " << i << endl;
@@ -413,11 +436,13 @@ void Word2vec::train_model(const string& train_file){
 		for (int j = 0; j < num_threads; j++) threads[j].join();
 		cout << endl;
 	}
-    clock_t now = clock();
-    cout << "Total training time : " << static_cast<float>(now-start)/(CLOCKS_PER_SEC*60) << " s"<< endl;
+    train_end = clock();
+    cout << "Total training time : " << static_cast<float>(train_end-train_beg)/(CLOCKS_PER_SEC*60) << " m"<< endl;
 }
 
 void Word2vec::save_vector(const string& output_file) {
+    clock_t save_beg, save_end;
+    save_beg = clock();
 	ofstream fout(output_file, ios::out);
 	fout << vocab_size << " " << layer1_size << endl;
 	for (long long i = 0; i < vocab_size; i++) {
@@ -428,5 +453,8 @@ void Word2vec::save_vector(const string& output_file) {
 		fout << endl;
 	}
 	fout.close();
+    save_end = clock();
+    float cost_time = static_cast<float>(save_end-save_beg)/CLOCKS_PER_SEC;
+    cout << "Save word vectors into file : " << output_file << "  Cost time : " << cost_time/60 << "m" << endl;
 }
 

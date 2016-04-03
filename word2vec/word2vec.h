@@ -64,6 +64,8 @@ private:
 	float* syn1;
 	// negative sampling
 	float* syn1_negative;
+	float* syn1_neg_gdsq;
+	float* syn0_gdsq;
 	int* table;
 	int table_size;
     int max_code_len;
