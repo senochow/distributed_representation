@@ -10,7 +10,7 @@
 * File:    word2vec.cpp
 */
 #include "word2vec.h"
-
+/*
 typedef unsigned int uint32_t;
 float rsqrt(float number){
     uint32_t i;
@@ -23,7 +23,7 @@ float rsqrt(float number){
     y  = y * ( 1.5F - ( x2 * y * y ) );
     return y;
 }
-
+*/
 Word2vec::Word2vec(string _model, string _train_method, int _iter, int _num_threads, int _layer1_size, int _window, int _negative, int _min_count, float _sample, float _alpha){
 	model = _model;
 	train_method = _train_method;
@@ -186,6 +186,7 @@ void Word2vec::init_network() {
 			for (j = 0; j < layer1_size; j++) {
                 syn1_negative[i*layer1_size+j] = 0;
                 syn1_neg_gdsq[i*layer1_size+j] = 1e-8;
+            }
 		}
 		init_sample_table();
 	}
@@ -204,7 +205,7 @@ bool Word2vec::read_line(vector<long long>& words, int& cur_words, ifstream& fin
 	if (fin.eof() || fin.tellg() >= end) return false;
 	string word;
 	char c;
-    int random = 0;
+    double random = 0;
 	while (static_cast<int>(words.size()) < max_sentence_len) {
 		c = fin.get();
 		if (fin.eof()) return true;
