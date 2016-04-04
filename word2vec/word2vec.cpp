@@ -10,7 +10,6 @@
 * File:    word2vec.cpp
 */
 #include "word2vec.h"
-/*
 typedef unsigned int uint32_t;
 float rsqrt(float number){
     uint32_t i;
@@ -23,8 +22,7 @@ float rsqrt(float number){
     y  = y * ( 1.5F - ( x2 * y * y ) );
     return y;
 }
-*/
-Word2vec::Word2vec(string _model, string _train_method, int _iter, int _num_threads, int _layer1_size, int _window, int _negative, int _min_count, float _sample, float _alpha){
+Word2vec::Word2vec(string _model, string _train_method, int _iter, int _num_threads, int _layer1_size, int _window, int _negative, int _min_count, float _sample, float _alpha, int _adagrad){
 	model = _model;
 	train_method = _train_method;
 	iter = _iter;
@@ -35,6 +33,7 @@ Word2vec::Word2vec(string _model, string _train_method, int _iter, int _num_thre
 	min_count = _min_count;
 	sample = _sample;
 	alpha = _alpha;
+    adagrad = _adagrad;
 	cout << "parameters \n";
 	cout << "'model': " << model << ", ";
 	cout << "'train_method': " << train_method << ", ";
@@ -46,6 +45,7 @@ Word2vec::Word2vec(string _model, string _train_method, int _iter, int _num_thre
 	cout << "'min_count': " << min_count << ", ";
 	cout << "'sample': " << sample << ", ";
 	cout << "'alpha': " << alpha << endl;
+	cout << "'Adagrad': " << adagrad << endl;
 }
 
 // vocab: vector<vocab_word>
@@ -171,21 +171,25 @@ void Word2vec::init_network() {
     min_alpha = start_alpha*0.0001;
     // init network paramters
 	syn0 = new float[vocab_size*layer1_size];
-	syn0_gdsq = new float[vocab_size*layer1_size];
+    if (adagrad) syn0_gdsq = new float[vocab_size*layer1_size];
 	if (train_method == "hs") {
 		syn1 = new float[vocab_size*layer1_size];
+        if (adagrad) syn1_gdsq = new float[vocab_size*layer1_size];
 		for (i = 0; i < vocab_size; i++) {
-			for (j = 0; j < layer1_size; j++) syn1[i*layer1_size + j] = 0;
+			for (j = 0; j < layer1_size; j++) {
+                syn1[i*layer1_size + j] = 0;
+                if (adagrad) syn1_gdsq[i*layer1_size + j] = 1e-8;
+            }
 		}
 	}
 	// if using negative sampling , init syn1_negative
 	if (negative > 0) {
 		syn1_negative = new float[vocab_size*layer1_size];
-        syn1_neg_gdsq = new float[vocab_size*layer1_size];
+        if (adagrad) syn1_neg_gdsq = new float[vocab_size*layer1_size];
 		for (i = 0; i < vocab_size; i++) {
 			for (j = 0; j < layer1_size; j++) {
                 syn1_negative[i*layer1_size+j] = 0;
-                syn1_neg_gdsq[i*layer1_size+j] = 1e-8;
+                if (adagrad) syn1_neg_gdsq[i*layer1_size+j] = 1e-8;
             }
 		}
 		init_sample_table();
@@ -195,7 +199,7 @@ void Word2vec::init_network() {
 	for (i = 0; i < vocab_size; i++) {
 		for (j = 0; j < layer1_size; j++) {
             syn0[i*layer1_size+j] = init_bound*(static_cast<float>(rand())/RAND_MAX - 0.5f);
-            syn0_gdsq[i*layer1_size+j] = 1e-8;
+            if (adagrad) syn0_gdsq[i*layer1_size+j] = 1e-8;
         }
 	}
 	creat_huffman_tree();
@@ -243,7 +247,7 @@ void Word2vec::train_cbow(vector<long long>& words, float cur_alpha) {
 	int sent_len = words.size();
 	if (sent_len <= 1) return;
 	int l, q, label; // l for layer index
-	float f, grad;
+	float f, grad, g_t;
 	long long cur_word, sample_word;
 	// for each word index
 	for (int index = 0; index < sent_len; index++) {
@@ -273,11 +277,24 @@ void Word2vec::train_cbow(vector<long long>& words, float cur_alpha) {
 				// hidden->output
 				for (l = 0; l < layer1_size; l++) f += syn1[q+l]*neu1[l];
 				f = 1.0/(1.0+exp(-f));
-				grad = (1-vocab[cur_word]->code[d]-f)*cur_alpha;
-				// propogate error output->hidden
-				for (l = 0; l < layer1_size; l++) neu1e[l] += grad*syn1[l+q];
-				// Learn weights hidden -> output
-				for (l = 0; l < layer1_size; l++) syn1[l+q] += grad*neu1[l];
+                if (adagrad) {
+                    grad = 1-vocab[cur_word]->code[d]-f;
+				    // propogate error output->hidden
+				    for (l = 0; l < layer1_size; l++) neu1e[l] += grad*syn1[l+q];
+				    // Learn weights hidden -> output
+				    for (l = 0; l < layer1_size; l++) {
+                        g_t = grad*neu1[l];
+                        syn1_gdsq[l+q] += g_t*g_t;
+                        syn1[l+q] += cur_alpha*g_t*rsqrt(syn1_gdsq[l+q]);
+                    }
+
+                }else {
+				    grad = (1-vocab[cur_word]->code[d]-f)*cur_alpha;
+				    // propogate error output->hidden
+				    for (l = 0; l < layer1_size; l++) neu1e[l] += grad*syn1[l+q];
+				    // Learn weights hidden -> output
+				    for (l = 0; l < layer1_size; l++) syn1[l+q] += grad*neu1[l];
+                }
 			}
 		}
 		// negative sampling method..
@@ -297,17 +314,39 @@ void Word2vec::train_cbow(vector<long long>& words, float cur_alpha) {
 				f = 0;
 				for (l = 0; l < layer1_size; l++) f += neu1[l] * syn1_negative[l2+l];
 				f = 1.0/(1.0+exp(-f));
-				grad = (label-f)*cur_alpha; // grad fro current instance
-				//output->hidden
-				for (l = 0; l < layer1_size; l++) neu1e[l] += grad*syn1_negative[l2+l];
-				// learn weights from hidden->out
-				for (l = 0; l < layer1_size; l++) syn1_negative[l2+l] += grad*neu1[l];
+                if (adagrad) {
+                    grad = label-f;
+				    //output->hidden
+				    for (l = 0; l < layer1_size; l++) neu1e[l] += grad*syn1_negative[l2+l];
+                    // learn weights from hidden->out
+                    for (l = 0; l < layer1_size; l++) {
+                        g_t = grad*neu1[l];
+                        syn1_neg_gdsq[l2 + l] += g_t*g_t;
+                        syn1_negative[l2 + l] += cur_alpha*g_t*rsqrt(syn1_neg_gdsq[l2 + l]);
+                    }
+                }else {
+				    grad = (label-f)*cur_alpha; // grad fro current instance
+				    //output->hidden
+				    for (l = 0; l < layer1_size; l++) neu1e[l] += grad*syn1_negative[l2+l];
+				    // learn weights from hidden->out
+				    for (l = 0; l < layer1_size; l++) syn1_negative[l2+l] += grad*neu1[l];
+                }
 			}
 		}
 		// update word vectors of word's context words , hidden-> input
+        long long p = 0;
 		for (int i = c_beg; i <= c_end; i++) {
 			if (i == index) continue; // pass cur_word index 
-			for (l = 0; l < layer1_size; l++) syn0[words[i]*layer1_size + l] += neu1e[l];
+            if (adagrad) {
+                for (l = 0; l < layer1_size; l++) {
+                    g_t = neu1e[l];
+                    p = words[i]*layer1_size + l;
+                    syn0_gdsq[p] += g_t*g_t;
+                    syn0[p] += cur_alpha*g_t*rsqrt(syn0_gdsq[p]);
+                }
+            }else {
+			    for (l = 0; l < layer1_size; l++) syn0[words[i]*layer1_size + l] += neu1e[l];
+            }
 		}
 	}
 }
@@ -322,7 +361,7 @@ void Word2vec::train_skip_gram(vector<long long>& words, float cur_alpha) {
     int sent_len = words.size();
 	long long cur_word, sample_word;
 	int l = 0, d = 0, label = 0;
-	float f, grad;
+	float f, grad, g_t;
 	long long l1, l2;
 	for (int index = 0; index < sent_len; index++) {
 		cur_word = words[index];
@@ -342,11 +381,23 @@ void Word2vec::train_skip_gram(vector<long long>& words, float cur_alpha) {
 					l2 = vocab[cur_word]->point[d] * layer1_size;
 					for (l = 0; l <layer1_size; l++) f += syn0[l1 + l] * syn1[l2 + l];
 					f = 1.0/(1+exp(-f));
-					grad = (1-vocab[cur_word]->code[d]-f)*cur_alpha;
-					// back error from output -> hidden;
-					for (l = 0; l < layer1_size; l++) neu1e[l] += grad*syn1[l2 + l];
-					// update non-leaf weights
-					for (l = 0; l < layer1_size; l++) syn1[l2 + l] += grad*syn0[l1 + l];
+                    if (adagrad) {
+                        grad = 1-vocab[cur_word]->code[d]-f;
+				        // propogate error output->hidden
+				        for (l = 0; l < layer1_size; l++) neu1e[l] += grad*syn1[l2 + l];
+				        // Learn weights hidden -> output
+				        for (l = 0; l < layer1_size; l++) {
+                            g_t = grad*syn0[l1 + l];
+                            syn1_gdsq[l2 + l] += g_t*g_t;
+                            syn1[l2 + l] += cur_alpha*g_t*rsqrt(syn1_gdsq[l2 + l]);
+                        }
+                    }else {
+					    grad = (1-vocab[cur_word]->code[d]-f)*cur_alpha;
+					    // back error from output -> hidden;
+					    for (l = 0; l < layer1_size; l++) neu1e[l] += grad*syn1[l2 + l];
+					    // update non-leaf weights
+					    for (l = 0; l < layer1_size; l++) syn1[l2 + l] += grad*syn0[l1 + l];
+                    }
 				}
 			}
 			// using negative sampling
@@ -364,15 +415,35 @@ void Word2vec::train_skip_gram(vector<long long>& words, float cur_alpha) {
 					f = 0;
 					for (l = 0; l < layer1_size; l++) f += syn0[l1 + l] * syn1_negative[l2 + l];
 					f = 1.0/(1+exp(-f));
-					grad = (label - f)*cur_alpha;
-					// bp : ouput->hidden
-					for (l = 0; l < layer1_size; l++) neu1e[l] += grad * syn1_negative[l2 + l];
-					// update syn1_neg 
-					for (l = 0; l < layer1_size; l++) syn1_negative[l2+l] += grad*syn0[l1 + l];
+                    if (adagrad) {
+					    grad = (label - f);
+					    // bp : ouput->hidden
+					    for (l = 0; l < layer1_size; l++) neu1e[l] += grad * syn1_negative[l2 + l];
+					    // update syn1_neg 
+                        for (l = 0; l < layer1_size; l++) {
+                            g_t = grad*syn0[l1 +l];
+                            syn1_neg_gdsq[l2+l] += g_t*g_t;
+                            syn1_negative[l2+l] += cur_alpha*g_t*rsqrt(syn1_neg_gdsq[l2+l]);
+                        }
+                    }else {
+					    grad = (label - f)*cur_alpha;
+					    // bp : ouput->hidden
+					    for (l = 0; l < layer1_size; l++) neu1e[l] += grad * syn1_negative[l2 + l];
+					    // update syn1_neg 
+					    for (l = 0; l < layer1_size; l++) syn1_negative[l2+l] += grad*syn0[l1 + l];
+                    }
 				}
 			}
 			// update cur context word which is the input word.
-			for (l = 0; l < layer1_size; l++) syn0[l1 + l] += neu1e[l]; 
+            if (adagrad) {
+                for (l = 0; l < layer1_size; l++) {
+                    float g_t = neu1e[l];
+                    syn0_gdsq[l1 + l] += g_t*g_t;
+                    syn0[l1 + l] += cur_alpha*g_t*rsqrt(syn0_gdsq[l1+l]);
+                }
+            }else {
+			    for (l = 0; l < layer1_size; l++) syn0[l1 + l] += neu1e[l]; 
+            }
 		}
 
 	}
@@ -403,8 +474,10 @@ void Word2vec::train_model_thread(const string filename, int t_id) {
                     static_cast<float>(trained_words)/(iter*total_words+1)*100, 
                     static_cast<float>(trained_words)/(static_cast<float>(now-start+1)/CLOCKS_PER_SEC*1000));
             fflush(stdout);
-            alpha = start_alpha*(1- static_cast<float>(trained_words)/(iter*total_words+1));
-            if (alpha < min_alpha) alpha = min_alpha;
+            if (!adagrad) {
+                alpha = start_alpha*(1- static_cast<float>(trained_words)/(iter*total_words+1));
+                if (alpha < min_alpha) alpha = min_alpha;
+            }
         }
     	if (model == "cbow") {
     		train_cbow(words, alpha);

@@ -50,6 +50,7 @@ private:
 	int min_count;
 	float sample;
 	float alpha;
+    int adagrad;
 private:
 	vector<vocab_word *> vocab;
 	unordered_map<string, long long> word2idx;
@@ -66,6 +67,7 @@ private:
 	float* syn1_negative;
 	float* syn1_neg_gdsq;
 	float* syn0_gdsq;
+	float* syn1_gdsq;
 	int* table;
 	int table_size;
     int max_code_len;
@@ -78,7 +80,7 @@ private:
 	void init_network();
 	void creat_huffman_tree();
 public:
-	Word2vec(string model, string train_method, int iter, int num_threads, int layer1_size, int window, int negative, int min_count, float sample, float alpha);
+	Word2vec(string model, string train_method, int iter, int num_threads, int layer1_size, int window, int negative, int min_count, float sample, float alpha, int adagrad);
 	int learn_vocab_from_trainfile(const string& train_file);	
 	void train_model(const string& train_file);
 	void save_vector(const string& output_file);
