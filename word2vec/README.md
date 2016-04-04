@@ -12,3 +12,7 @@ List:
 * Key points: upadte rule for hs and negtive sample
 * adagrad: sum history grads += 
 
+Issues
+===
+* Progress is not correct.
+* Time statics is not correct.
