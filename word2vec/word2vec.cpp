@@ -218,6 +218,7 @@ bool Word2vec::read_line(vector<long long>& words, int& cur_words, ifstream& fin
 			if (!word.empty()) {
 				auto iter = word2idx.find(word);
                 // some infrequent words will be remove before
+                //cur_words++;
 				if (iter != word2idx.end()) {
                     cur_words++;
                     if (sample > 0) {
@@ -225,7 +226,10 @@ bool Word2vec::read_line(vector<long long>& words, int& cur_words, ifstream& fin
                         float p = sample*total_words/vocab[iter->second]->cnt;
                         p = sqrt(p) + p;
                         random = static_cast<double>(rand())/RAND_MAX;
-                        if (p < random) continue;
+                        if (p < random) {
+                            word.clear();
+                            continue;
+                        }
                     }
                     words.push_back(iter->second);
                 }
@@ -460,9 +464,7 @@ void Word2vec::train_model_thread(const string filename, int t_id) {
     // process file
     fin.seekg(fbeg, ios::beg);
     vector<long long> words;
-    clock_t now;
-    struct timeb start_time, cur_time;
-    ftime(&start_time);
+    clock_t now; // clock time, all cpu cosume time
     long long word_cnt = 0, pre_word_cnt = 0;
     // read each line 
     int cur_words = 0;
@@ -473,13 +475,9 @@ void Word2vec::train_model_thread(const string filename, int t_id) {
             trained_words += word_cnt-pre_word_cnt;
             pre_word_cnt = word_cnt;
             now = clock();
-            ftime(&cur_time);
             printf("%cAlpha: %f Progress: %.2f%% Words/thread/sec: %.2fk ", 13, alpha, 
                     static_cast<float>(trained_words)/(iter*total_words+1)*100, 
                     static_cast<float>(trained_words)/(static_cast<float>(now-start+1)/CLOCKS_PER_SEC*1000));
-            printf("%cAlpha: %f Progress: %.2f%% Words/thread/sec: %.2fk ", 13, alpha, 
-                    static_cast<float>(trained_words)/(iter*total_words+1)*100, 
-                    static_cast<float>(trained_words)/(static_cast<float>(cur_time.time - start_time.time + 0.001)*1000));
             fflush(stdout);
             if (!adagrad) {
                 alpha = start_alpha*(1- static_cast<float>(trained_words)/(iter*total_words+1));
