@@ -12,7 +12,7 @@ List:
 * Key points: upadte rule for hs and negtive sample
 * adagrad: sum history grads += 
 
-Issues
-===
-* Progress is not correct.
-* Time statics is not correct.
+History:
+* 0630. fix progress and time bug
+    - cause by continue that results word unclear before search for next word.
+    - clock is cpu time and unsuitable for global time calculation.
