@@ -59,8 +59,8 @@ int Word2vec::learn_vocab_from_trainfile(const string& train_file) {
     cout <<"Loading training file : " << train_file << endl;
 	unordered_map<string, long long> word_cnt;
 	string word;
-    clock_t load_beg, load_end;
-    load_beg = clock();
+	struct timeb load_beg, load_end;
+    ftime(&load_beg);
 	while (fin >> word) {
         total_words++;
 		word_cnt[word] += 1;
@@ -69,8 +69,9 @@ int Word2vec::learn_vocab_from_trainfile(const string& train_file) {
             fflush(stdout);
         }
 	}
-    load_end = clock();
-    cout << "Loading words: "<< total_words << " end !  consume time : " << static_cast<float>(load_end-load_beg)/(CLOCKS_PER_SEC*60) << " m" << endl;
+	ftime(&load_end);
+	int load_cost_sec = load_end.time - load_beg.time;
+    cout << "Loading words: "<< total_words << " end !  consume time : " << load_cost_sec/60 << " m " << load_cost_sec%60 << " s "<< endl;
 	fin.close();
 	// remove word that cnt < min_cnt
     // remember to reset total words cnt
@@ -460,6 +461,8 @@ void Word2vec::train_model_thread(const string filename, int t_id) {
     fin.seekg(fbeg, ios::beg);
     vector<long long> words;
     clock_t now;
+    struct timeb start_time, cur_time;
+    ftime(&start_time);
     long long word_cnt = 0, pre_word_cnt = 0;
     // read each line 
     int cur_words = 0;
@@ -470,9 +473,13 @@ void Word2vec::train_model_thread(const string filename, int t_id) {
             trained_words += word_cnt-pre_word_cnt;
             pre_word_cnt = word_cnt;
             now = clock();
+            ftime(&cur_time);
             printf("%cAlpha: %f Progress: %.2f%% Words/thread/sec: %.2fk ", 13, alpha, 
                     static_cast<float>(trained_words)/(iter*total_words+1)*100, 
                     static_cast<float>(trained_words)/(static_cast<float>(now-start+1)/CLOCKS_PER_SEC*1000));
+            printf("%cAlpha: %f Progress: %.2f%% Words/thread/sec: %.2fk ", 13, alpha, 
+                    static_cast<float>(trained_words)/(iter*total_words+1)*100, 
+                    static_cast<float>(trained_words)/(static_cast<float>(cur_time.time - start_time.time + 0.001)*1000));
             fflush(stdout);
             if (!adagrad) {
                 alpha = start_alpha*(1- static_cast<float>(trained_words)/(iter*total_words+1));
@@ -498,8 +505,8 @@ void Word2vec::train_model(const string& train_file){
 	}
 	fin.close();
     init_network();
-    clock_t train_beg, train_end;
-    train_beg = clock();
+    struct timeb train_beg , train_end;
+    ftime(&train_beg);
     start = clock();
 	for (int i = 0; i < iter; i++) {
 		cout << "iter " << i << endl;
@@ -510,8 +517,9 @@ void Word2vec::train_model(const string& train_file){
 		for (int j = 0; j < num_threads; j++) threads[j].join();
 		cout << endl;
 	}
-    train_end = clock();
-    cout << "Total training time : " << static_cast<float>(train_end-train_beg)/(CLOCKS_PER_SEC*60) << " m"<< endl;
+	ftime(&train_end);
+	int train_cost_sec = train_end.time - train_beg.time;
+    cout << "Total training time : " << train_cost_sec/60 << " m "<< train_cost_sec%60 << " s" << endl;
 }
 
 void Word2vec::save_vector(const string& output_file) {
