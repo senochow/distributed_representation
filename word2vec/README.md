@@ -3,7 +3,7 @@ Implemention of multi-thread word2vec using c++11.
 optimization: Adagrad
 
 
-List:
+Issues:
 * forget to reset total words (0), which slow down the learning rate to shrinkage
 * trained words caculate error, subsample words is included
 * vector index and word index in vocab is not equal
