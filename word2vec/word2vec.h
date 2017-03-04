@@ -55,6 +55,7 @@ class Word2vec {
     private:
         vector<vocab_word *> vocab;
         unordered_map<string, long long> word2idx;
+        unordered_map<long long, vector<long, long> > sim_words;
         long long vocab_size;
         long long total_words;
         long long trained_words; // processed words currently
@@ -77,12 +78,14 @@ class Word2vec {
         bool read_line(vector<long long>& words, int& cur_words, ifstream& fin, long long end);
         void train_cbow(vector<long long>& words, float cur_alpha);
         void train_skip_gram(vector<long long>& words, float cur_alpha);
+        void train_skip_gram_with_specializing(vector<long long>& words, float cur_alpha);
         void init_sample_table();
         void init_network();
         void creat_huffman_tree();
     public:
         Word2vec(string model, string train_method, int iter, int num_threads, int layer1_size, int window, int negative, int min_count, float sample, float alpha, int adagrad);
-        int learn_vocab_from_trainfile(const string& train_file);	
+        int learn_vocab_from_trainfile(const string& train_file);
+        int load_simwords(const string& sim_file);
         void train_model(const string& train_file);
         void save_vector(const string& output_file);
 

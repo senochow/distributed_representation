@@ -92,7 +92,29 @@ int Word2vec::learn_vocab_from_trainfile(const string& train_file) {
     }
     return 1;
 }
-
+int Word2vec::load_simwords(const string& sim_file) {
+    ifstream fin(sim_file, ios::in);
+    string line;
+    while (getline(fin, line)) {
+        stringstream ss(line);
+        string word;
+        long long main_wordidx;
+        vector<long long> words;
+        int i = 0;
+        while (getline(ss, word, ' ') {
+            wordindex = word2idx[word];
+            if (i == 0) {
+                main_wordidx = wordindex;
+            } else {
+                words.push_back(wordindex);
+            }   
+            i++;
+        }
+        sim_words[main_wordidx] = words;
+    }
+    fin.close();
+    return 1;
+}
 // tree length is log(V)
 void Word2vec::creat_huffman_tree() {
     long long nodes_cnt = 2 * vocab_size;
@@ -453,6 +475,128 @@ void Word2vec::train_skip_gram(vector<long long>& words, float cur_alpha) {
 
     }
 }
+
+// refer: Specializing Word Embeddings for Similarity or Relatedness
+void Word2vec::train_skip_gram_with_specializing(vector<long long>& words, float cur_alpha) {
+    vector<float> neu1e(layer1_size, 0);
+    int sent_len = words.size();
+    long long cur_word, sample_word;
+    int l = 0, d = 0, label = 0;
+    float f, grad, g_t;
+    long long l1, l2;
+    for (int index = 0; index < sent_len; index++) {
+        cur_word = words[index];
+        // get context of cur_words
+        int b = rand()%window;// b~[0..window-1] context: window-b ~ [1..window]
+        int c_beg = max(0, index-window+b);
+        int c_end = min(sent_len-1, index+window-b);
+        for (int c_index = c_beg; c_index <= c_end; c_index++) {
+            if (c_index == index) continue;
+            for (l = 0; l < layer1_size; l++) neu1e[l] = 0;
+            sample_word = words[c_index];
+            l1 = sample_word*layer1_size;
+            // using negative sampling
+            if (negative > 0) {
+                for (int k = 0; k < negative+1; k++) {
+                    if (k == 0) {
+                        sample_word = cur_word;
+                        label = 1;
+                    }else {
+                        sample_word = table[rand()%table_size];
+                        if (sample_word == cur_word) continue;
+                        label = 0;
+                    }
+                    l2 = sample_word*layer1_size;
+                    f = 0;
+                    for (l = 0; l < layer1_size; l++) f += syn0[l1 + l] * syn1_negative[l2 + l];
+                    f = 1.0/(1+exp(-f));
+                    if (adagrad) {
+                        grad = (label - f);
+                        // bp : ouput->hidden
+                        for (l = 0; l < layer1_size; l++) neu1e[l] += grad * syn1_negative[l2 + l];
+                        // update syn1_neg 
+                        for (l = 0; l < layer1_size; l++) {
+                            g_t = grad*syn0[l1 +l];
+                            syn1_neg_gdsq[l2+l] += g_t*g_t;
+                            syn1_negative[l2+l] += cur_alpha*g_t*rsqrt(syn1_neg_gdsq[l2+l]);
+                        }
+                    }else {
+                        grad = (label - f)*cur_alpha;
+                        // bp : ouput->hidden
+                        for (l = 0; l < layer1_size; l++) neu1e[l] += grad * syn1_negative[l2 + l];
+                        // update syn1_neg 
+                        for (l = 0; l < layer1_size; l++) syn1_negative[l2+l] += grad*syn0[l1 + l];
+                    }
+                }
+            }
+            // update cur context word which is the input word.
+            if (adagrad) {
+                for (l = 0; l < layer1_size; l++) {
+                    float g_t = neu1e[l];
+                    syn0_gdsq[l1 + l] += g_t*g_t;
+                    syn0[l1 + l] += cur_alpha*g_t*rsqrt(syn0_gdsq[l1+l]);
+                }
+            }else {
+                for (l = 0; l < layer1_size; l++) syn0[l1 + l] += neu1e[l]; 
+            }
+        }
+        // add similar words as context words
+        if (sim_words.find(cur_word) != sim_words.end()) {
+            for (int a = 0; a < sim_words[cur_word].size(); a++) {
+                for (l = 0; l < layer1_size; l++) neu1e[l] = 0;
+                    sample_word = sim_words[cur_word][a];
+                    l1 = sample_word*layer1_size;
+                    // using negative sampling
+                    if (negative > 0) {
+                        for (int k = 0; k < negative+1; k++) {
+                            if (k == 0) {
+                                sample_word = cur_word;
+                                label = 1;
+                            }else {
+                                sample_word = table[rand()%table_size];
+                                if (sample_word == cur_word) continue;
+                                label = 0;
+                            }
+                            l2 = sample_word*layer1_size;
+                            f = 0;
+                            for (l = 0; l < layer1_size; l++) f += syn0[l1 + l] * syn1_negative[l2 + l];
+                            f = 1.0/(1+exp(-f));
+                            if (adagrad) {
+                                grad = (label - f);
+                                // bp : ouput->hidden
+                                for (l = 0; l < layer1_size; l++) neu1e[l] += grad * syn1_negative[l2 + l];
+                                // update syn1_neg 
+                                for (l = 0; l < layer1_size; l++) {
+                                    g_t = grad*syn0[l1 +l];
+                                    syn1_neg_gdsq[l2+l] += g_t*g_t;
+                                    syn1_negative[l2+l] += cur_alpha*g_t*rsqrt(syn1_neg_gdsq[l2+l]);
+                                }
+                            }else {
+                                grad = (label - f)*cur_alpha;
+                                // bp : ouput->hidden
+                                for (l = 0; l < layer1_size; l++) neu1e[l] += grad * syn1_negative[l2 + l];
+                                // update syn1_neg 
+                                for (l = 0; l < layer1_size; l++) syn1_negative[l2+l] += grad*syn0[l1 + l];
+                            }
+                        }
+                    }
+                    // update cur context word which is the input word.
+                    if (adagrad) {
+                        for (l = 0; l < layer1_size; l++) {
+                            float g_t = neu1e[l];
+                            syn0_gdsq[l1 + l] += g_t*g_t;
+                            syn0[l1 + l] += cur_alpha*g_t*rsqrt(syn0_gdsq[l1+l]);
+                        }
+                    }else {
+                        for (l = 0; l < layer1_size; l++) syn0[l1 + l] += neu1e[l]; 
+                    }
+            }
+        }
+        }
+
+    }
+}
+
 void Word2vec::train_model_thread(const string filename, int t_id) {
     ifstream fin(filename, ios::in);
     fin.seekg(0, ios::end);
@@ -488,6 +632,8 @@ void Word2vec::train_model_thread(const string filename, int t_id) {
             train_cbow(words, alpha);
         }else if (model == "sk") {
             train_skip_gram(words, alpha);
+        } else if (model == "sk-sp") {
+            train_skip_gram_with_specializing(words, alpha);
         }
         words.clear();
         cur_words = 0;
