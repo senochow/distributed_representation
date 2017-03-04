@@ -55,7 +55,7 @@ class Word2vec {
     private:
         vector<vocab_word *> vocab;
         unordered_map<string, long long> word2idx;
-        unordered_map<long long, vector<long, long> > sim_words;
+        unordered_map<long long, vector<long long> > sim_words;
         long long vocab_size;
         long long total_words;
         long long trained_words; // processed words currently

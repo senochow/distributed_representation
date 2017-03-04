@@ -71,7 +71,7 @@ int main(int argc, char **argv) {
     }
     int i;
     // set variable
-    string train_file = "", output_file = "";
+    string train_file = "", output_file = "", sim_file = "";
     string save_vocab_file = "", read_vocab_file = "";
     int layer1_size = 100, window = 5;
     string model = "cbow";
@@ -81,6 +81,7 @@ int main(int argc, char **argv) {
     int num_threads = 10, iter = 1, min_count = 5;
     if ((i = ArgPos((char *)"-size", argc, argv)) > 0) layer1_size = atoi(argv[i + 1]);
     if ((i = ArgPos((char *)"-train", argc, argv)) > 0) train_file = string(argv[i + 1]);
+    if ((i = ArgPos((char *)"-simfile", argc, argv)) > 0) sim_file = string(argv[i + 1]);
     if ((i = ArgPos((char *)"-save-vocab", argc, argv)) > 0) save_vocab_file = string(argv[i + 1]);
     if ((i = ArgPos((char *)"-read-vocab", argc, argv)) > 0) read_vocab_file= string(argv[i + 1]);
     if ((i = ArgPos((char *)"-model", argc, argv)) > 0) model = string(argv[i+1]);

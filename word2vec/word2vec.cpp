@@ -101,7 +101,7 @@ int Word2vec::load_simwords(const string& sim_file) {
         long long main_wordidx;
         vector<long long> words;
         int i = 0;
-        while (getline(ss, word, ' ') {
+        while (getline(ss, word, ' ')) {
             wordindex = word2idx[word];
             if (i == 0) {
                 main_wordidx = wordindex;
