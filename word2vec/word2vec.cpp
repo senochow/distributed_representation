@@ -592,8 +592,6 @@ void Word2vec::train_skip_gram_with_specializing(vector<long long>& words, float
                     }
             }
         }
-        }
-
     }
 }
 
