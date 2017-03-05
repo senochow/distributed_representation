@@ -102,7 +102,7 @@ int Word2vec::load_simwords(const string& sim_file) {
         vector<long long> words;
         int i = 0;
         while (getline(ss, word, ' ')) {
-            wordindex = word2idx[word];
+            long long wordindex = word2idx[word];
             if (i == 0) {
                 main_wordidx = wordindex;
             } else {
@@ -591,7 +591,6 @@ void Word2vec::train_skip_gram_with_specializing(vector<long long>& words, float
                         for (l = 0; l < layer1_size; l++) syn0[l1 + l] += neu1e[l]; 
                     }
             }
-        }
         }
 
     }
